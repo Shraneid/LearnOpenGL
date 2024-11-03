@@ -217,23 +217,23 @@ int main() {
 		//lightColor.z = (cos(time)+1)/2.0;
 
 		// render light source cube
-		model = glm::mat4(1.0f);
-		float range = 10.0f;
-		float speed = 1.0f;
-		//lightPosition = baseLightPosition;
-		lightPosition = baseLightPosition + glm::vec3(0.0f, 0.0f, -(sin(time * speed) + 1.0f) * range/2.0f);
-		model = glm::translate(model, lightPosition);
-		model = glm::scale(model, glm::vec3(0.2f));
+		//model = glm::mat4(1.0f);
+		//float range = 10.0f;
+		//float speed = 1.0f;
+		////lightPosition = baseLightPosition;
+		//lightPosition = baseLightPosition + glm::vec3(0.0f, 0.0f, -(sin(time * speed) + 1.0f) * range/2.0f);
+		//model = glm::translate(model, lightPosition);
+		//model = glm::scale(model, glm::vec3(0.2f));
 
-		lightSourceShader.use();
-		lightSourceShader.setMat4("model", model);
-		lightSourceShader.setMat4("view", view);
-		lightSourceShader.setMat4("projection", projection);
+		//lightSourceShader.use();
+		//lightSourceShader.setMat4("model", model);
+		//lightSourceShader.setMat4("view", view);
+		//lightSourceShader.setMat4("projection", projection);
 
-		lightSourceShader.setVec3("lightColor", lightColor);
+		//lightSourceShader.setVec3("lightColor", lightColor);
 
-		glBindVertexArray(lightSourceVAO);
-		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+		//glBindVertexArray(lightSourceVAO);
+		//glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 
 		// render object cube
 		litCubeShader.use();
@@ -246,8 +246,11 @@ int main() {
 		litCubeShader.setVec3("cameraPos", camera.Position);
 		
 		//light
-		//litCubeShader.setVec3("light.direction", glm::vec3(-0.2, -1.0, -0.3));
-		litCubeShader.setVec3("light.position", lightPosition);
+		litCubeShader.setVec3("light.position", camera.Position);
+		litCubeShader.setVec3("light.direction", camera.Front);
+		litCubeShader.setFloat("light.inner_cutoff", cos(glm::radians(10.0f)));
+		litCubeShader.setFloat("light.outer_cutoff", cos(glm::radians(15.0f)));
+
 		litCubeShader.setVec3("light.ambient", glm::vec3(0.2, 0.2, 0.2));
 		litCubeShader.setVec3("light.diffuse", lightColor);
 		litCubeShader.setVec3("light.specularColor", glm::vec3(1.0));

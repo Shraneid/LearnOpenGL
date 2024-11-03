@@ -10,6 +10,9 @@ struct Material {
 
 struct Light {
 	vec3 position;
+	vec3 direction;
+	float outer_cutoff;
+	float inner_cutoff;
 
 	vec3 ambient;
 	vec3 diffuse;
@@ -59,6 +62,15 @@ void main()
 	diffuse *= attenuation;
 	specular *= attenuation;
 
+	// cone cutoff calculations
+	float theta = dot(lightDir, normalize(-light.direction));
+	float epsilon = light.inner_cutoff - light.outer_cutoff;
+	float intensity = clamp((theta - light.outer_cutoff)/epsilon, 0.0, 1.0);
+
+	diffuse *= intensity;
+	specular *= intensity;
+	
 	vec3 result = ambient + diffuse + specular;
+
 	FragColor = vec4(result, 1.0f);
 };
