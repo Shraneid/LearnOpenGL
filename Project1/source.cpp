@@ -1,6 +1,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
+#include <vector>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -20,7 +21,7 @@ unsigned int load_texture(const char* path);
 
 int windowWidth = 1920, windowHeight = 1080;
 
-Camera camera = Camera(glm::vec3(0.7f, -1.5f, 4.0f));
+Camera camera = Camera();
 int lastX, lastY;
 
 // physics
@@ -31,6 +32,23 @@ float lastFrame = 0.0f;
 double currentTime, delta;
 double lastTime = glfwGetTime();
 int nbFrames = 0;
+
+struct DirectionalLight {
+	glm::vec3 direction;
+	glm::vec3 ambient;
+	glm::vec3 diffuse;
+	glm::vec3 specular;
+};
+
+struct PointLight {
+	glm::vec3 position;
+	glm::vec3 ambient;
+	glm::vec3 diffuse;
+	glm::vec3 specular;
+	float constant;
+	float linear;
+	float quadratic;
+};
 
 int main() {
 	stbi_set_flip_vertically_on_load(true);
@@ -151,7 +169,7 @@ int main() {
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GL_FLOAT), (void*)0);
 	glEnableVertexAttribArray(0);
 
-	glm::vec3 cubePositions[] = {
+	std::vector<glm::vec3> cubePositions = {
 		glm::vec3(0.0f,  0.0f,  0.0f),
 		glm::vec3(2.0f,  5.0f, -15.0f),
 		glm::vec3(-1.5f, -2.2f, -2.5f),
@@ -186,19 +204,58 @@ int main() {
 	litCubeShader.setInt("material.specularMap", 1);
 	litCubeShader.setInt("material.emissionMap", 2);
 
-	glm::vec3 baseLightPosition(1.2f, 1.0f, 3.0f);
-	glm::vec3 lightPosition;
-
 	glm::mat4 model, view, projection;
 
-	//glm::vec3 lightColor(1.0f, 0.0f, 0.0f);
-	glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
+	// Camera setup
+	camera.Position = glm::vec3(4.269909f, 2.050022f, -4.690299f);
+	camera.UpdateCameraVectors(glm::vec3(-0.593976f, -0.311008f, 0.741934f));
+
+	// Lights setup
+	DirectionalLight directionalLight = DirectionalLight{
+		glm::vec3(0.5f, -1.0f, 0.2f),	//pos
+		glm::vec3(0.0f),				//ambient
+		glm::vec3(0.0f),				//diffuse
+		glm::vec3(0.5f)					//specular
+	};
+
+	std::vector<PointLight> basePointLights = {
+		PointLight{
+			glm::vec3(2.5f, 0.0f, 0.0f),
+			glm::vec3(0.2f),
+			glm::vec3(1.0f, 0.0f, 0.0f),
+			glm::vec3(1.0f),
+			1.0f, 0.045f, 0.0075f
+		},
+		PointLight{
+			glm::vec3(2.3f, 3.3f, -4.0f),
+			glm::vec3(0.2f),
+			glm::vec3(0.0f, 1.0f, 0.0f),
+			glm::vec3(1.0f),
+			1.0f, 0.045f, 0.0075f
+		},
+		PointLight{
+			glm::vec3(0.0f, 0.0f, -3.0f),
+			glm::vec3(0.2f),
+			glm::vec3(0.0f, 0.0f, 1.0f),
+			glm::vec3(1.0f),
+			1.0f, 0.045f, 0.0075f
+		},
+		PointLight{
+			glm::vec3(-4.0f, 2.0f, -12.0f),
+			glm::vec3(0.2f),
+			glm::vec3(1.0f),
+			glm::vec3(1.0f),
+			1.0f, 0.045f, 0.0075f
+		}
+	};
+
+	std::vector<PointLight> pointLights = basePointLights;
 
 	while (!glfwWindowShouldClose(window)) {
 		processInput(window);
 
 		// background
-		glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
+		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// physics
@@ -210,30 +267,27 @@ int main() {
 
 		view = camera.GetViewMatrix();
 		projection = glm::perspective(glm::radians(camera.Zoom), (float)windowWidth / (float)windowHeight, 0.1f, 100.0f);
-		//projection = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f, 0.1f, 100.0f);
-
-		// update light color
-		//lightColor.y = (sin(time)+1)/2.0;
-		//lightColor.z = (cos(time)+1)/2.0;
 
 		// render light source cube
-		//model = glm::mat4(1.0f);
-		//float range = 10.0f;
-		//float speed = 1.0f;
-		////lightPosition = baseLightPosition;
-		//lightPosition = baseLightPosition + glm::vec3(0.0f, 0.0f, -(sin(time * speed) + 1.0f) * range/2.0f);
-		//model = glm::translate(model, lightPosition);
-		//model = glm::scale(model, glm::vec3(0.2f));
+		for (int i = 0; i < pointLights.size(); i++) {
+			model = glm::mat4(1.0f);
 
-		//lightSourceShader.use();
-		//lightSourceShader.setMat4("model", model);
-		//lightSourceShader.setMat4("view", view);
-		//lightSourceShader.setMat4("projection", projection);
+			float range = 10.0f;
+			float speed = 1.0f;
+			
+			model = glm::translate(model, pointLights[i].position);
+			model = glm::scale(model, glm::vec3(0.2f));
 
-		//lightSourceShader.setVec3("lightColor", lightColor);
+			lightSourceShader.use();
+			lightSourceShader.setMat4("model", model);
+			lightSourceShader.setMat4("view", view);
+			lightSourceShader.setMat4("projection", projection);
 
-		//glBindVertexArray(lightSourceVAO);
-		//glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+			lightSourceShader.setVec3("lightColor", glm::vec3(pointLights[i].diffuse));
+
+			glBindVertexArray(lightSourceVAO);
+			glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+		}
 
 		// render object cube
 		litCubeShader.use();
@@ -243,10 +297,52 @@ int main() {
 		litCubeShader.setMat4("view", view);
 		litCubeShader.setMat4("projection", projection);
 
-		litCubeShader.setVec3("cameraPos", camera.Position);
+		litCubeShader.setVec3("viewPos", camera.Position);
 		
 		//light
-		litCubeShader.setVec3("light.position", camera.Position);
+		litCubeShader.setVec3("directionalLight.direction", directionalLight.direction);
+		litCubeShader.setVec3("directionalLight.ambient", directionalLight.ambient);
+		litCubeShader.setVec3("directionalLight.diffuse", directionalLight.diffuse);
+		litCubeShader.setVec3("directionalLight.specular", directionalLight.specular);
+		
+		pointLights[0].position = basePointLights[0].position + glm::vec3(sin(time), 0.0f, 0.0f);
+		pointLights[1].position = basePointLights[1].position + glm::vec3(0.0f, sin(time), 0.0f);
+		pointLights[2].position = basePointLights[2].position + glm::vec3(sin(time), sin(time), 0.0f);
+
+		for (int i = 0; i < pointLights.size(); i++) {
+			std::string indexString = std::to_string(i);
+
+			litCubeShader.setVec3(
+				"pointLights[" + indexString + "].position",
+				pointLights[i].position
+			);
+			litCubeShader.setFloat(
+				"pointLights[" + indexString + "].constant",
+				pointLights[i].constant
+			);
+			litCubeShader.setFloat(
+				"pointLights[" + indexString + "].linear",
+				pointLights[i].linear
+			);
+			litCubeShader.setFloat(
+				"pointLights[" + indexString + "].quadratic",
+				pointLights[i].quadratic
+			);
+			litCubeShader.setVec3(
+				"pointLights[" + indexString + "].ambient",
+				pointLights[i].ambient
+			);
+			litCubeShader.setVec3(
+				"pointLights[" + indexString + "].diffuse",
+				pointLights[i].diffuse
+			);
+			litCubeShader.setVec3(
+				"pointLights[" + indexString + "].specularColor",
+				pointLights[i].specular
+			);
+		}
+
+		/*litCubeShader.setVec3("light.position", camera.Position);
 		litCubeShader.setVec3("light.direction", camera.Front);
 		litCubeShader.setFloat("light.inner_cutoff", cos(glm::radians(10.0f)));
 		litCubeShader.setFloat("light.outer_cutoff", cos(glm::radians(15.0f)));
@@ -256,11 +352,11 @@ int main() {
 		litCubeShader.setVec3("light.specularColor", glm::vec3(1.0));
 		litCubeShader.setFloat("light.constant", 1.0f);
 		litCubeShader.setFloat("light.linear", 0.045f);
-		litCubeShader.setFloat("light.quadratic", 0.0075f);
+		litCubeShader.setFloat("light.quadratic", 0.0075f);*/
 		
 		// material
 		litCubeShader.setVec3("material.specular", glm::vec3(0.628281, 0.555802, 0.366065));
-		litCubeShader.setFloat("material.shininess", 0.4f);
+		litCubeShader.setFloat("material.shininess", 200.0f);
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, container_texture_id);
@@ -269,7 +365,7 @@ int main() {
 		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_2D, container_texture_id);
 
-		for (int i = 0; i < 10; i++) {
+		for (int i = 0; i < cubePositions.size(); i++) {
 			model = glm::mat4(1.0f);
 			model = glm::translate(model, cubePositions[i]);
 
@@ -318,6 +414,24 @@ void processInput(GLFWwindow* window) {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
 
+	if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
+		std::cout << "camera position: (" 
+			+ std::to_string(camera.Position.x)
+			+ ", "
+			+ std::to_string(camera.Position.y) 
+			+ ", "
+			+ std::to_string(camera.Position.z) 
+			+ ")"
+			<< std::endl;
+		std::cout << "camera Front: (" 
+			+ std::to_string(camera.Front.x)
+			+ ", "
+			+ std::to_string(camera.Front.y)
+			+ ", "
+			+ std::to_string(camera.Front.z)
+			+ ")"
+			<< std::endl;
+	}
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
 		camera.ProcessKeyboard(Camera_Movement::FORWARD, deltaTime);
 	}
