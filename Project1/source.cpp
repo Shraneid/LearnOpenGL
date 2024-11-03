@@ -20,7 +20,7 @@ unsigned int load_texture(const char* path);
 
 int windowWidth = 1920, windowHeight = 1080;
 
-Camera camera = Camera(glm::vec3(0.7f, 0.5f, 4.0f));
+Camera camera = Camera(glm::vec3(0.7f, -1.5f, 4.0f));
 int lastX, lastY;
 
 // physics
@@ -282,6 +282,15 @@ int main() {
 			glBindVertexArray(VAO);
 			glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 		}
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(0.0f, -52.5f, 0.0f));
+		model = glm::scale(model, glm::vec3(100.0f));
+
+		litCubeShader.setMat4("model", model);
+
+		glBindVertexArray(VAO);
+		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 
 		// show fps in window name
 		currentTime = glfwGetTime();
