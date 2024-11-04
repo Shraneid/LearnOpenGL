@@ -21,7 +21,15 @@ unsigned int load_texture(const char* path);
 
 int windowWidth = 1920, windowHeight = 1080;
 
-Camera camera = Camera();
+//
+//camera.Position = glm::vec3(4.269909f, 2.050022f, -4.690299f);
+//camera.UpdateCameraVectors(glm::vec3(-0.593976f, -0.311008f, 0.741934f));
+
+Camera camera = Camera(
+	glm::vec3(4.269909f, 2.050022f, -4.690299f),	// Position
+	glm::vec3(0.0f, 1.0f, 0.0f),					// World UP
+	-224.580002f, -19.940031f						// Yaw, Pitch
+);
 int lastX, lastY;
 
 // physics
@@ -205,10 +213,6 @@ int main() {
 	litCubeShader.setInt("material.emissionMap", 2);
 
 	glm::mat4 model, view, projection;
-
-	// Camera setup
-	camera.Position = glm::vec3(4.269909f, 2.050022f, -4.690299f);
-	camera.UpdateCameraVectors(glm::vec3(-0.593976f, -0.311008f, 0.741934f));
 
 	// Lights setup
 	DirectionalLight directionalLight = DirectionalLight{
@@ -423,12 +427,10 @@ void processInput(GLFWwindow* window) {
 			+ std::to_string(camera.Position.z) 
 			+ ")"
 			<< std::endl;
-		std::cout << "camera Front: (" 
-			+ std::to_string(camera.Front.x)
+		std::cout << "(yaw, pitch): (" 
+			+ std::to_string(camera.Yaw)
 			+ ", "
-			+ std::to_string(camera.Front.y)
-			+ ", "
-			+ std::to_string(camera.Front.z)
+			+ std::to_string(camera.Pitch)
 			+ ")"
 			<< std::endl;
 	}
