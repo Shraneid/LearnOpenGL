@@ -21,10 +21,6 @@ unsigned int load_texture(const char* path);
 
 int windowWidth = 1920, windowHeight = 1080;
 
-//
-//camera.Position = glm::vec3(4.269909f, 2.050022f, -4.690299f);
-//camera.UpdateCameraVectors(glm::vec3(-0.593976f, -0.311008f, 0.741934f));
-
 Camera camera = Camera(
 	glm::vec3(4.269909f, 2.050022f, -4.690299f),	// Position
 	glm::vec3(0.0f, 1.0f, 0.0f),					// World UP
@@ -32,7 +28,12 @@ Camera camera = Camera(
 );
 int lastX, lastY;
 
+bool blackLightOn = false;
+float blackLightButtonLastTimePressed = 0.0f;
+
 // physics
+float elapsedTime = 0.0f;
+
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
@@ -222,6 +223,7 @@ int main() {
 	unsigned int container_texture_id = load_texture("./resources/textures/container2.png");
 	unsigned int container_specular_texture_id = load_texture("./resources/textures/container2_specular.png");
 	unsigned int matrix_texture_id = load_texture("./resources/textures/matrix.jpg");
+	unsigned int blood_texture_id = load_texture("./resources/textures/blood.png");
 
 	// COMPILING SHADERS
 	Shader litCubeShader(
@@ -306,7 +308,7 @@ int main() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// physics
-		float time = (float)glfwGetTime();
+		elapsedTime = (float)glfwGetTime();
 		
 		float currentFrame = (float)glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
@@ -339,7 +341,7 @@ int main() {
 		// render object cube
 		litCubeShader.use();
 
-		litCubeShader.setFloat("time", time);
+		litCubeShader.setFloat("elapsedTime", elapsedTime);
 
 		litCubeShader.setMat4("view", view);
 		litCubeShader.setMat4("projection", projection);
@@ -353,9 +355,9 @@ int main() {
 		litCubeShader.setVec3("directionalLight.specular", directionalLight.specular);
 		
 		// move lights around
-		pointLights[0].position = basePointLights[0].position + glm::vec3(sin(time), 0.0f, 0.0f);
-		pointLights[1].position = basePointLights[1].position + glm::vec3(0.0f, sin(time), 0.0f);
-		pointLights[2].position = basePointLights[2].position + glm::vec3(sin(time), sin(time), 0.0f);
+		pointLights[0].position = basePointLights[0].position + glm::vec3(sin(elapsedTime), 0.0f, 0.0f);
+		pointLights[1].position = basePointLights[1].position + glm::vec3(0.0f, sin(elapsedTime), 0.0f);
+		pointLights[2].position = basePointLights[2].position + glm::vec3(sin(elapsedTime), sin(elapsedTime), 0.0f);
 
 		// point lights uniforms
 		for (int i = 0; i < pointLights.size(); i++) {
@@ -392,6 +394,8 @@ int main() {
 		}
 
 		// spot light uniforms
+		litCubeShader.setBool("blackLightOn", blackLightOn);
+
 		litCubeShader.setVec3("spotLight.direction", spotLight.getDirection());
 		litCubeShader.setVec3("spotLight.position", spotLight.getPosition());
 
@@ -415,7 +419,7 @@ int main() {
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, container_specular_texture_id);
 		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, container_texture_id);
+		glBindTexture(GL_TEXTURE_2D, blood_texture_id);
 
 		for (int i = 0; i < cubePositions.size(); i++) {
 			model = glm::mat4(1.0f);
@@ -481,6 +485,11 @@ void processInput(GLFWwindow* window) {
 			+ std::to_string(camera.Pitch)
 			+ ")"
 			<< std::endl;
+	}
+	if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
+		if (elapsedTime - blackLightButtonLastTimePressed > 0.07f)
+			blackLightOn = !blackLightOn;
+			blackLightButtonLastTimePressed = elapsedTime;
 	}
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
 		camera.ProcessKeyboard(Camera_Movement::FORWARD, deltaTime);

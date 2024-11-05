@@ -54,6 +54,8 @@ uniform vec3 viewPos;
 
 uniform float time;
 
+uniform bool blackLightOn;
+
 in vec3 Normal;
 in vec3 FragPos;
 in vec2 TexCoords;
@@ -78,7 +80,8 @@ void main()
 		result += CalcPointLight(pointLights[i], FragPos, normal, viewDir);
 	}
 
-	result += CalcSpotLight(spotLight, FragPos, normal, viewDir);
+	if (blackLightOn)
+		result += CalcSpotLight(spotLight, FragPos, normal, viewDir);
 
 	vec3 lightDir = normalize(-directionalLight.direction);
 	vec3 reflectDir = reflect(-lightDir, normal);
@@ -145,8 +148,8 @@ vec3 CalcSpotLight(SpotLight light, vec3 fragPos, vec3 normal, vec3 viewDir) {
 	if (diff < 0.001)
 		spec = 0;
 
-	vec3 ambient = light.ambient * vec3(texture(material.diffuseMap, TexCoords));
-	vec3 diffuse = light.diffuse * diff * vec3(texture(material.diffuseMap, TexCoords));
+	vec3 ambient = light.ambient * vec3(texture(material.emissionMap, TexCoords));
+	vec3 diffuse = light.diffuse * diff * vec3(texture(material.emissionMap, TexCoords));
 	vec3 specular = light.specular * spec * vec3(texture(material.specularMap, TexCoords));
 	
 	float distance = length(light.position - FragPos);
@@ -164,5 +167,6 @@ vec3 CalcSpotLight(SpotLight light, vec3 fragPos, vec3 normal, vec3 viewDir) {
 	diffuse *= intensity;
 	specular *= intensity;
 	
-	return (ambient + diffuse + specular);
+	//return (ambient + diffuse + specular);
+	return (diffuse + specular);
 }
