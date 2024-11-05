@@ -43,6 +43,7 @@ int nbFrames = 0;
 
 struct DirectionalLight {
 	glm::vec3 direction;
+	
 	glm::vec3 ambient;
 	glm::vec3 diffuse;
 	glm::vec3 specular;
@@ -50,13 +51,40 @@ struct DirectionalLight {
 
 struct PointLight {
 	glm::vec3 position;
+	
 	glm::vec3 ambient;
 	glm::vec3 diffuse;
 	glm::vec3 specular;
+	
 	float constant;
 	float linear;
 	float quadratic;
 };
+
+struct SpotLight {
+	glm::vec3* direction;
+	const glm::vec3* position;
+
+	float innerCutoff;
+	float outerCutoff;
+
+	glm::vec3 ambient;
+	glm::vec3 diffuse;
+	glm::vec3 specular;
+	
+	float constant;
+	float linear;
+	float quadratic;
+
+	glm::vec3 getDirection() const {
+		return *direction;
+	}
+
+	glm::vec3 getPosition() const {
+		return *position;
+	}
+};
+
 
 int main() {
 	stbi_set_flip_vertically_on_load(true);
@@ -252,8 +280,23 @@ int main() {
 			1.0f, 0.045f, 0.0075f
 		}
 	};
-
 	std::vector<PointLight> pointLights = basePointLights;
+
+	SpotLight spotLight = SpotLight{
+		&camera.Front,
+		&camera.Position,
+
+		cos(glm::radians(10.0f)),
+		cos(glm::radians(15.0f)),
+
+		glm::vec3(0.2f),
+		glm::vec3(1.0f),
+		glm::vec3(1.0f),
+
+		1.0f,
+		0.045f,
+		0.0075f
+	};
 
 	while (!glfwWindowShouldClose(window)) {
 		processInput(window);
@@ -303,16 +346,18 @@ int main() {
 
 		litCubeShader.setVec3("viewPos", camera.Position);
 		
-		//light
+		// directional light
 		litCubeShader.setVec3("directionalLight.direction", directionalLight.direction);
 		litCubeShader.setVec3("directionalLight.ambient", directionalLight.ambient);
 		litCubeShader.setVec3("directionalLight.diffuse", directionalLight.diffuse);
 		litCubeShader.setVec3("directionalLight.specular", directionalLight.specular);
 		
+		// move lights around
 		pointLights[0].position = basePointLights[0].position + glm::vec3(sin(time), 0.0f, 0.0f);
 		pointLights[1].position = basePointLights[1].position + glm::vec3(0.0f, sin(time), 0.0f);
 		pointLights[2].position = basePointLights[2].position + glm::vec3(sin(time), sin(time), 0.0f);
 
+		// point lights uniforms
 		for (int i = 0; i < pointLights.size(); i++) {
 			std::string indexString = std::to_string(i);
 
@@ -341,23 +386,26 @@ int main() {
 				pointLights[i].diffuse
 			);
 			litCubeShader.setVec3(
-				"pointLights[" + indexString + "].specularColor",
+				"pointLights[" + indexString + "].specular",
 				pointLights[i].specular
 			);
 		}
 
-		/*litCubeShader.setVec3("light.position", camera.Position);
-		litCubeShader.setVec3("light.direction", camera.Front);
-		litCubeShader.setFloat("light.inner_cutoff", cos(glm::radians(10.0f)));
-		litCubeShader.setFloat("light.outer_cutoff", cos(glm::radians(15.0f)));
+		// spot light uniforms
+		litCubeShader.setVec3("spotLight.direction", spotLight.getDirection());
+		litCubeShader.setVec3("spotLight.position", spotLight.getPosition());
 
-		litCubeShader.setVec3("light.ambient", glm::vec3(0.2, 0.2, 0.2));
-		litCubeShader.setVec3("light.diffuse", lightColor);
-		litCubeShader.setVec3("light.specularColor", glm::vec3(1.0));
-		litCubeShader.setFloat("light.constant", 1.0f);
-		litCubeShader.setFloat("light.linear", 0.045f);
-		litCubeShader.setFloat("light.quadratic", 0.0075f);*/
-		
+		litCubeShader.setFloat("spotLight.innerCutoff", spotLight.innerCutoff);
+		litCubeShader.setFloat("spotLight.outerCutoff", spotLight.outerCutoff);
+
+		litCubeShader.setVec3("spotLight.ambient", spotLight.ambient);
+		litCubeShader.setVec3("spotLight.diffuse", spotLight.diffuse);
+		litCubeShader.setVec3("spotLight.specular", spotLight.specular);
+
+		litCubeShader.setFloat("spotLight.constant", spotLight.constant);
+		litCubeShader.setFloat("spotLight.linear", spotLight.linear);
+		litCubeShader.setFloat("spotLight.quadratic", spotLight.quadratic);
+				
 		// material
 		litCubeShader.setVec3("material.specular", glm::vec3(0.628281, 0.555802, 0.366065));
 		litCubeShader.setFloat("material.shininess", 200.0f);

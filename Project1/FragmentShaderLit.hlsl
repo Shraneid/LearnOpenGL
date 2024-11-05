@@ -36,8 +36,9 @@ uniform PointLight pointLights[NR_POINT_LIGHTS];
 struct SpotLight {
 	vec3 direction;
 	vec3 position;
-	float inner_cutoff;
-	float outer_cutoff;
+
+	float innerCutoff;
+	float outerCutoff;
 
 	float constant;
 	float linear;
@@ -77,12 +78,10 @@ void main()
 		result += CalcPointLight(pointLights[i], FragPos, normal, viewDir);
 	}
 
-	//result += CalcSpotLight(spotLight, FragPos, normal, viewDir);
+	result += CalcSpotLight(spotLight, FragPos, normal, viewDir);
 
 	vec3 lightDir = normalize(-directionalLight.direction);
 	vec3 reflectDir = reflect(-lightDir, normal);
-
-	vec3 temp = vec3(pow(max(dot(viewDir, reflectDir), 0.0f), .5));
 
 	FragColor = vec4(result, 1.0f);
 };
@@ -159,8 +158,8 @@ vec3 CalcSpotLight(SpotLight light, vec3 fragPos, vec3 normal, vec3 viewDir) {
 	specular *= attenuation;
 
 	float theta = dot(lightDir, normalize(-light.direction));
-	float epsilon = light.inner_cutoff - light.outer_cutoff;
-	float intensity = clamp((theta - light.outer_cutoff)/epsilon, 0.0, 1.0);
+	float epsilon = light.innerCutoff - light.outerCutoff;
+	float intensity = clamp((theta - light.outerCutoff)/epsilon, 0.0, 1.0);
 
 	diffuse *= intensity;
 	specular *= intensity;
