@@ -13,9 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Images">
-      <UniqueIdentifier>{80087ae8-02f1-4585-ade6-c3eab97af657}</UniqueIdentifier>
-    </Filter>
     <Filter Include="FragmentShaders">
       <UniqueIdentifier>{9e1f7ab6-5c23-4b3d-95be-a907b9cea742}</UniqueIdentifier>
     </Filter>
@@ -44,6 +41,12 @@
     <ClInclude Include="Camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Mesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Model.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="VertexShaderBase.hlsl">
@@ -64,13 +67,14 @@
     <FxCompile Include="VertexShaderWithNormal.hlsl">
       <Filter>VertexShaders</Filter>
     </FxCompile>
+    <FxCompile Include="FragmentShaderModelBase.hlsl">
+      <Filter>FragmentShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="VertexShaderModelBase.hlsl">
+      <Filter>VertexShaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="barna.png">
-      <Filter>Images</Filter>
-    </Image>
-    <Image Include="container2.png">
-      <Filter>Images</Filter>
-    </Image>
+    <None Include=".clang-format" />
   </ItemGroup>
 </Project>
