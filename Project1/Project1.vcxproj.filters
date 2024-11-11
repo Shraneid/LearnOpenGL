@@ -47,6 +47,12 @@
     <ClInclude Include="Model.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Cube.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Light.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="VertexShaderBase.hlsl">
@@ -73,6 +79,8 @@
     <FxCompile Include="VertexShaderModelBase.hlsl">
       <Filter>VertexShaders</Filter>
     </FxCompile>
+    <FxCompile Include="FragmentShaderModelLit.hlsl" />
+    <FxCompile Include="VertexShaderModelLit.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />
