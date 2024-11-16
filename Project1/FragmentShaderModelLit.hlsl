@@ -60,8 +60,6 @@ void main()
 		result += CalcPointLight(pointLights[i], FragPos, normal, viewDir);
 	}
 
-	//result = vec3(texture(material.texture_diffuse1, TexCoords));
-	
 	FragColor = vec4(result, 1.0f);
 };
 

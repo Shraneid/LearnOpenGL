@@ -79,8 +79,15 @@
     <FxCompile Include="VertexShaderModelBase.hlsl">
       <Filter>VertexShaders</Filter>
     </FxCompile>
-    <FxCompile Include="FragmentShaderModelLit.hlsl" />
-    <FxCompile Include="VertexShaderModelLit.hlsl" />
+    <FxCompile Include="VertexShaderModelLit.hlsl">
+      <Filter>VertexShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="FragmentShaderModelLit.hlsl">
+      <Filter>FragmentShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="FragmentShaderSolidColor.hlsl">
+      <Filter>FragmentShaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />

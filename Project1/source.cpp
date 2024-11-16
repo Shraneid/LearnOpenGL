@@ -72,11 +72,15 @@ main()
     glfwSetScrollCallback(window, scroll_callback);
 
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_STENCIL_TEST);
 
     // START OF CODE
     Shader lightCubeShader("VertexShaderBase.hlsl", "FragmentShaderBase.hlsl");
     Cube greenLightCubeObject{ glm::vec3(0.0f, 0.0f, 2.0f) };
     Cube purpleLightCubeObject{ glm::vec3(0.0f, 0.0f, -2.0f) };
+
+    // cube test for stencil buffer
+    Cube cube{ glm::vec3(0.0f, 0.0f, 0.0f) };
 
     auto d1 = std::make_shared<DirectionalLight>(
       glm::vec3(0.5f, -1.0f, -1.2f), // direction
@@ -127,6 +131,8 @@ main()
                              "FragmentShaderBase.hlsl");
     Shader litModelShader("VertexShaderModelLit.hlsl",
                           "FragmentShaderModelLit.hlsl");
+    Shader outlineModelShader("VertexShaderModelLit.hlsl",
+                              "FragmentShaderSolidColor.hlsl");
 
     string path = "resources/models/backpack/backpack.obj";
     Model backpackModel = Model(FileSystem::getPath(path));
@@ -134,12 +140,19 @@ main()
     // Wireframe mode
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
+    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
 
-        // background
+        // SETTINGS
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT |
+                GL_STENCIL_BUFFER_BIT);
+
+        glStencilMask(0x00);
+        glEnable(GL_DEPTH_TEST);
+        glDisable(GL_STENCIL_TEST);
 
         // physics
         elapsedTime = (float)glfwGetTime();
@@ -161,6 +174,65 @@ main()
                                       (float)windowWidth / (float)windowHeight,
                                       0.1f,
                                       100.0f);
+
+        // main model
+        glEnable(GL_STENCIL_TEST);
+        glStencilFunc(GL_ALWAYS, 1, 0xFF);
+        glStencilMask(0xFF);
+
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(0.0f));
+        model = glm::scale(model, glm::vec3(0.5f));
+
+        /*litModelShader.use();
+
+        litModelShader.setMat4("view", view);
+        litModelShader.setMat4("projection", projection);
+        litModelShader.setMat4("model", model);
+
+        litModelShader.setVec3("viewPos", camera.Position);
+        litModelShader.setFloat("time", elapsedTime);
+
+        for (auto light : lights) {
+            light.get()->setUniforms(litModelShader);
+        }
+
+        backpackModel.Draw(litModelShader);*/
+
+        outlineModelShader.use();
+
+        outlineModelShader.setMat4("model", model);
+        outlineModelShader.setMat4("view", view);
+        outlineModelShader.setMat4("projection", projection);
+        outlineModelShader.setVec3("solidColor", glm::vec3(1.0f, 0.0f, 0.0f));
+        cube.Draw();
+
+        // draw outline
+        glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+        glStencilMask(0x00);
+        glDisable(GL_DEPTH_TEST);
+
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(0.0f));
+        model = glm::scale(model, glm::vec3(0.55f));
+
+        outlineModelShader.use();
+
+        outlineModelShader.setMat4("model", model);
+        outlineModelShader.setMat4("view", view);
+        outlineModelShader.setMat4("projection", projection);
+        outlineModelShader.setVec3("solidColor", glm::vec3(0.0f, 1.0f, 0.0f));
+
+        outlineModelShader.setVec3("viewPos", camera.Position);
+        outlineModelShader.setFloat("time", elapsedTime);
+
+        //backpackModel.Draw(outlineModelShader);
+        cube.Draw();
+
+        glStencilMask(0xFF);
+        glStencilFunc(GL_ALWAYS, 1, 0xFF);
+        glEnable(GL_DEPTH_TEST);
+        glDisable(GL_STENCIL_TEST);
 
         // render light cubes
         model = glm::mat4(1.0f);
@@ -188,26 +260,6 @@ main()
 
         lightSourceShader.setVec3("lightColor", p2.get()->getDiffuse());
         purpleLightCubeObject.Draw();
-
-        // main model
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f));
-        model = glm::scale(model, glm::vec3(0.5f));
-
-        litModelShader.use();
-
-        litModelShader.setMat4("view", view);
-        litModelShader.setMat4("projection", projection);
-        litModelShader.setMat4("model", model);
-
-        litModelShader.setVec3("viewPos", camera.Position);
-        litModelShader.setFloat("time", elapsedTime);
-
-        for (auto light : lights) {
-            light.get()->setUniforms(litModelShader);
-        }
-
-        backpackModel.Draw(litModelShader);
 
         // show fps in window name
         currentTime = glfwGetTime();
