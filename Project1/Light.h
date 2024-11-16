@@ -7,12 +7,13 @@
 class Light
 {
   public:
-    Light() = default;
     int GetLightId() const { return id; }
 
     virtual void setUniforms(Shader& shader) const = 0;
 
   protected:
+    Light() = default;
+
     static int directionalLightsCounter;
     static int pointLightsCounter;
     static int spotLightsCounter;
