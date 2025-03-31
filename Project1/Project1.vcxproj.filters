@@ -55,41 +55,47 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="VertexShaderBase.hlsl">
+    <FxCompile Include="VertexShaderBase.glsl">
       <Filter>VertexShaders</Filter>
     </FxCompile>
-    <FxCompile Include="VertexShaderWithColor.hlsl">
+    <FxCompile Include="VertexShaderWithColor.glsl">
       <Filter>VertexShaders</Filter>
     </FxCompile>
-    <FxCompile Include="FragmentShaderBase.hlsl">
+    <FxCompile Include="FragmentShaderBase.glsl">
       <Filter>FragmentShaders</Filter>
     </FxCompile>
-    <FxCompile Include="FragmentShaderWithTexture.hlsl">
+    <FxCompile Include="FragmentShaderWithTexture.glsl">
       <Filter>FragmentShaders</Filter>
     </FxCompile>
-    <FxCompile Include="FragmentShaderLit.hlsl">
+    <FxCompile Include="FragmentShaderLit.glsl">
       <Filter>FragmentShaders</Filter>
     </FxCompile>
-    <FxCompile Include="VertexShaderWithNormal.hlsl">
+    <FxCompile Include="VertexShaderWithNormal.glsl">
       <Filter>VertexShaders</Filter>
     </FxCompile>
-    <FxCompile Include="FragmentShaderModelBase.hlsl">
+    <FxCompile Include="FragmentShaderModelBase.glsl">
       <Filter>FragmentShaders</Filter>
     </FxCompile>
-    <FxCompile Include="VertexShaderModelBase.hlsl">
+    <FxCompile Include="VertexShaderModelBase.glsl">
       <Filter>VertexShaders</Filter>
     </FxCompile>
-    <FxCompile Include="VertexShaderModelLit.hlsl">
+    <FxCompile Include="VertexShaderModelLit.glsl">
       <Filter>VertexShaders</Filter>
     </FxCompile>
-    <FxCompile Include="FragmentShaderModelLit.hlsl">
+    <FxCompile Include="FragmentShaderModelLit.glsl">
       <Filter>FragmentShaders</Filter>
     </FxCompile>
-    <FxCompile Include="FragmentShaderSolidColor.hlsl">
+    <FxCompile Include="FragmentShaderSolidColor.glsl">
       <Filter>FragmentShaders</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />
+    <None Include="..\README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\README.gif">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

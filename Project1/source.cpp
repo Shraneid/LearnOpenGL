@@ -9,7 +9,6 @@
 #include "filesystem.h"
 #include "stb_image.h"
 #include "Light.h"
-#include "Cube.h"
 
 void
 processInput(GLFWwindow* window);
@@ -75,94 +74,31 @@ main()
     glEnable(GL_STENCIL_TEST);
 
     // START OF CODE
-    Shader lightCubeShader("VertexShaderBase.hlsl", "FragmentShaderBase.hlsl");
-    Cube greenLightCubeObject{ glm::vec3(0.0f, 0.0f, 2.0f) };
-    Cube purpleLightCubeObject{ glm::vec3(0.0f, 0.0f, -2.0f) };
-
-    // cube test for stencil buffer
-    Cube cube{ glm::vec3(0.0f, 0.0f, 0.0f) };
-
-    auto d1 = std::make_shared<DirectionalLight>(
-      glm::vec3(0.5f, -1.0f, -1.2f), // direction
-      glm::vec3(0.05f),              // ambient
-      glm::vec3(0.4f),               // diffuse
-      glm::vec3(0.5f)                // specular
-    );
-    auto d2 = std::make_shared<DirectionalLight>(
-      glm::vec3(3.0f, -1.0f, 1.0f), // direction
-      glm::vec3(0.05f),             // ambient
-      glm::vec3(1.0f, 0.0f, 0.0f),  // diffuse
-      glm::vec3(0.5f)               // specular
-    );
-    auto d3 = std::make_shared<DirectionalLight>(
-      glm::vec3(-3.0f, -1.0f, -1.0f), // direction
-      glm::vec3(0.05f),               // ambient
-      glm::vec3(0.0f, 0.0f, 1.0f),    // diffuse
-      glm::vec3(0.5f)                 // specular
-    );
-    auto p1 =
-      std::make_shared<PointLight>(&greenLightCubeObject.Position, // position
-                                   glm::vec3(0.05f),               // ambient
-                                   glm::vec3(0.0f, 1.0f, 0.0f),    // diffuse
-                                   glm::vec3(0.5f),                // specular
-                                   1.0f,                           // constant
-                                   0.045f,                         // linear
-                                   0.0075f                         // quadratic
-      );
-    auto p2 =
-      std::make_shared<PointLight>(&purpleLightCubeObject.Position, // position
-                                   glm::vec3(0.05f),                // ambient
-                                   glm::vec3(1.0f, 0.0f, 1.0f),     // diffuse
-                                   glm::vec3(0.5f),                 // specular
-                                   1.0f,                            // constant
-                                   0.045f,                          // linear
-                                   0.0075f                          // quadratic
-      );
-
-    vector<std::shared_ptr<Light>> lights;
-    lights.push_back(d1);
-    lights.push_back(d2);
-    lights.push_back(d3);
-    lights.push_back(p1);
-    lights.push_back(p2);
 
     // COMPILING SHADERS
-    Shader lightSourceShader("VertexShaderBase.hlsl",
-                             "FragmentShaderBase.hlsl");
-    Shader litModelShader("VertexShaderModelLit.hlsl",
-                          "FragmentShaderModelLit.hlsl");
-    Shader outlineModelShader("VertexShaderModelLit.hlsl",
-                              "FragmentShaderSolidColor.hlsl");
+    Shader texturedCubeShader("VertexShaderModelBase.glsl",
+                              "FragmentShaderModelBase.glsl");
+    Shader transparentWindowShader("VertexShaderModelBase.glsl",
+                              "FragmentShaderModelBase.glsl");
 
-    string path = "resources/models/backpack/backpack.obj";
-    Model backpackModel = Model(FileSystem::getPath(path));
+    string cubePath = "resources/models/textured_cube/cube.obj";
+    Model cubeModel = Model(FileSystem::getPath(cubePath));
+
+    string transparentWindowPath = "resources/models/transparent_window/transparent_window.obj";
+    Model transparentWindowModel = Model(FileSystem::getPath(transparentWindowPath));
 
     // Wireframe mode
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
 
         // SETTINGS
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT |
-                GL_STENCIL_BUFFER_BIT);
-
-        glStencilMask(0x00);
-        glEnable(GL_DEPTH_TEST);
-        glDisable(GL_STENCIL_TEST);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // physics
         elapsedTime = (float)glfwGetTime();
-
-        greenLightCubeObject.Position = glm::vec3(
-          glm::sin(elapsedTime) * 2.0f, 0.0f, glm::cos(elapsedTime) * 2.0f);
-        purpleLightCubeObject.Position =
-          glm::vec3(glm::sin(elapsedTime + glm::pi<float>()) * 2.0f,
-                    0.0f,
-                    glm::cos(elapsedTime + glm::pi<float>()) * 2.0f);
 
         float currentFrame = (float)glfwGetTime();
         deltaTime = currentFrame - lastFrame;
@@ -176,90 +112,24 @@ main()
                                       100.0f);
 
         // main model
-        glEnable(GL_STENCIL_TEST);
-        glStencilFunc(GL_ALWAYS, 1, 0xFF);
-        glStencilMask(0xFF);
-
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(0.0f));
+        model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         model = glm::scale(model, glm::vec3(0.5f));
 
-        /*litModelShader.use();
+        transparentWindowShader.use();
 
-        litModelShader.setMat4("view", view);
-        litModelShader.setMat4("projection", projection);
-        litModelShader.setMat4("model", model);
-
-        litModelShader.setVec3("viewPos", camera.Position);
-        litModelShader.setFloat("time", elapsedTime);
-
-        for (auto light : lights) {
-            light.get()->setUniforms(litModelShader);
-        }
-
-        backpackModel.Draw(litModelShader);*/
-
-        outlineModelShader.use();
-
-        outlineModelShader.setMat4("model", model);
-        outlineModelShader.setMat4("view", view);
-        outlineModelShader.setMat4("projection", projection);
-        outlineModelShader.setVec3("solidColor", glm::vec3(1.0f, 0.0f, 0.0f));
-        cube.Draw();
-
-        // draw outline
-        glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-        glStencilMask(0x00);
-        glDisable(GL_DEPTH_TEST);
-
+        transparentWindowShader.setMat4("model", model);
+        transparentWindowShader.setMat4("view", view);
+        transparentWindowShader.setMat4("projection", projection);
+        
+        //cubeModel.Draw(texturedCubeShader);
+        transparentWindowModel.Draw(transparentWindowShader);
+        
         model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f));
-        model = glm::scale(model, glm::vec3(0.55f));
-
-        outlineModelShader.use();
-
-        outlineModelShader.setMat4("model", model);
-        outlineModelShader.setMat4("view", view);
-        outlineModelShader.setMat4("projection", projection);
-        outlineModelShader.setVec3("solidColor", glm::vec3(0.0f, 1.0f, 0.0f));
-
-        outlineModelShader.setVec3("viewPos", camera.Position);
-        outlineModelShader.setFloat("time", elapsedTime);
-
-        //backpackModel.Draw(outlineModelShader);
-        cube.Draw();
-
-        glStencilMask(0xFF);
-        glStencilFunc(GL_ALWAYS, 1, 0xFF);
-        glEnable(GL_DEPTH_TEST);
-        glDisable(GL_STENCIL_TEST);
-
-        // render light cubes
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, greenLightCubeObject.Position);
-        model = glm::scale(model, glm::vec3(0.1f));
-
-        lightSourceShader.use();
-
-        lightSourceShader.setMat4("model", model);
-        lightSourceShader.setMat4("view", view);
-        lightSourceShader.setMat4("projection", projection);
-
-        lightSourceShader.setVec3("lightColor", p1.get()->getDiffuse());
-        greenLightCubeObject.Draw();
-
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, purpleLightCubeObject.Position);
-        model = glm::scale(model, glm::vec3(0.1f));
-
-        lightSourceShader.use();
-
-        lightSourceShader.setMat4("model", model);
-        lightSourceShader.setMat4("view", view);
-        lightSourceShader.setMat4("projection", projection);
-
-        lightSourceShader.setVec3("lightColor", p2.get()->getDiffuse());
-        purpleLightCubeObject.Draw();
+        model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
+        model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        transparentWindowModel.Draw(transparentWindowShader);
 
         // show fps in window name
         currentTime = glfwGetTime();
