@@ -79,7 +79,7 @@ main()
     Shader texturedCubeShader("VertexShaderModelBase.glsl",
                               "FragmentShaderModelBase.glsl");
     Shader transparentWindowShader("VertexShaderModelBase.glsl",
-                              "FragmentShaderModelBase.glsl");
+                              "FragmentShaderModelTransparent.glsl");
 
     string cubePath = "resources/models/textured_cube/cube.obj";
     Model cubeModel = Model(FileSystem::getPath(cubePath));
@@ -87,8 +87,16 @@ main()
     string transparentWindowPath = "resources/models/transparent_window/transparent_window.obj";
     Model transparentWindowModel = Model(FileSystem::getPath(transparentWindowPath));
 
+    //string transparentWindowPath = "resources/models/red_window/red_window.obj";
+    //Model transparentWindowModel = Model(FileSystem::getPath(transparentWindowPath));
+
     // Wireframe mode
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    vector<glm::vec3> windows;
+    windows.push_back(glm::vec3(-1.5f, 0.0f, -0.5f));
+    windows.push_back(glm::vec3( 1.5f, 0.0f,  0.5f));
+    windows.push_back(glm::vec3( 0.0f, 0.0f,  0.7f));
+    windows.push_back(glm::vec3( 0.5f, 0.0f, -1.0f));
 
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
@@ -112,24 +120,26 @@ main()
                                       100.0f);
 
         // main model
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f));
-        model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        model = glm::scale(model, glm::vec3(0.5f));
+        for (int i = 0; i < windows.size(); i++) {
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, windows[i]);
+            model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+            model = glm::scale(model, glm::vec3(0.5f));
 
-        transparentWindowShader.use();
+            transparentWindowShader.use();
 
-        transparentWindowShader.setMat4("model", model);
-        transparentWindowShader.setMat4("view", view);
-        transparentWindowShader.setMat4("projection", projection);
+            transparentWindowShader.setMat4("model", model);
+            transparentWindowShader.setMat4("view", view);
+            transparentWindowShader.setMat4("projection", projection);
+
+            // cubeModel.Draw(texturedCubeShader);
+            transparentWindowModel.Draw(transparentWindowShader);
+        }
         
-        //cubeModel.Draw(texturedCubeShader);
-        transparentWindowModel.Draw(transparentWindowShader);
-        
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
-        model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        transparentWindowModel.Draw(transparentWindowShader);
+        //model = glm::mat4(1.0f);
+        //model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
+        //model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        //transparentWindowModel.Draw(transparentWindowShader);
 
         // show fps in window name
         currentTime = glfwGetTime();
