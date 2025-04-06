@@ -38,6 +38,27 @@ int nbFrames = 0;
 // transformation matrices
 glm::mat4 model, view, projection;
 
+float
+translate1(float elapsedTime)
+{
+    return sin(elapsedTime);
+}
+float
+translate2(float elapsedTime)
+{
+    return sin(2 * elapsedTime);
+}
+float
+translate3(float elapsedTime)
+{
+    return sin(3 * elapsedTime);
+}
+float
+translate4(float elapsedTime)
+{
+    return sin(4 * elapsedTime);
+}
+
 int
 main()
 {
@@ -72,6 +93,11 @@ main()
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_STENCIL_TEST);
+    glEnable(GL_BLEND);
+
+    // blending setup
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendEquation(GL_FUNC_ADD);
 
     // START OF CODE
 
@@ -79,24 +105,57 @@ main()
     Shader texturedCubeShader("VertexShaderModelBase.glsl",
                               "FragmentShaderModelBase.glsl");
     Shader transparentWindowShader("VertexShaderModelBase.glsl",
-                              "FragmentShaderModelTransparent.glsl");
+                                   "FragmentShaderModelTransparent.glsl");
 
     string cubePath = "resources/models/textured_cube/cube.obj";
     Model cubeModel = Model(FileSystem::getPath(cubePath));
 
-    string transparentWindowPath = "resources/models/transparent_window/transparent_window.obj";
-    Model transparentWindowModel = Model(FileSystem::getPath(transparentWindowPath));
+    // string transparentWindowPath =
+    // "resources/models/transparent_window/transparent_window.obj"; Model
+    // transparentWindowModel =
+    // Model(FileSystem::getPath(transparentWindowPath));
 
-    //string transparentWindowPath = "resources/models/red_window/red_window.obj";
-    //Model transparentWindowModel = Model(FileSystem::getPath(transparentWindowPath));
+    string transparentWindowPath = "resources/models/red_window/red_window.obj";
+    Model transparentWindowModel =
+      Model(FileSystem::getPath(transparentWindowPath));
 
     // Wireframe mode
+    struct WindowStruct
+    {
+        glm::vec3 base_position;
+        glm::vec3 current_position;
+        float offset;
+        float (*function)(float);
 
-    vector<glm::vec3> windows;
-    windows.push_back(glm::vec3(-1.5f, 0.0f, -0.5f));
-    windows.push_back(glm::vec3( 1.5f, 0.0f,  0.5f));
-    windows.push_back(glm::vec3( 0.0f, 0.0f,  0.7f));
-    windows.push_back(glm::vec3( 0.5f, 0.0f, -1.0f));
+        float distance_to_camera;
+
+        bool operator<(const WindowStruct& other)
+        {
+            return distance_to_camera > other.distance_to_camera;
+        }
+    };
+
+    vector<WindowStruct> windows;
+    windows.push_back({ glm::vec3(0.5f, 0.0f, -1.0f),
+                        glm::vec3(0.5f, 0.0f, -1.0f),
+                        0.0f,
+                        translate1,
+                        0.0f });
+    windows.push_back({ glm::vec3(-1.5f, 0.0f, -0.5f),
+                        glm::vec3(-1.5f, 0.0f, -0.5f),
+                        0.0f,
+                        translate2,
+                        0.0f });
+    windows.push_back({ glm::vec3(1.5f, 0.0f, 0.5f),
+                        glm::vec3(1.5f, 0.0f, 0.5f),
+                        0.0f,
+                        translate3,
+                        0.0f });
+    windows.push_back({ glm::vec3(0.0f, 0.0f, 0.7f),
+                        glm::vec3(0.0f, 0.0f, 0.7f),
+                        0.0f,
+                        translate4,
+                        0.0f });
 
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
@@ -119,11 +178,24 @@ main()
                                       0.1f,
                                       100.0f);
 
+        for (WindowStruct& window : windows) {
+            window.offset = window.function(elapsedTime);
+
+            window.current_position = { window.base_position.x + window.offset,
+                                   window.base_position.y,
+                                   window.base_position.z };
+            glm::vec3 camera_to_window_vector = window.current_position - camera.Position;
+            window.distance_to_camera = glm::dot(camera_to_window_vector, camera_to_window_vector);
+        }
+
+        std::sort(windows.begin(), windows.end());
+
         // main model
-        for (int i = 0; i < windows.size(); i++) {
+        for (WindowStruct& window : windows) {
             model = glm::mat4(1.0f);
-            model = glm::translate(model, windows[i]);
-            model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+            model = glm::translate(model, window.current_position);
+            model = glm::rotate(
+              model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
             model = glm::scale(model, glm::vec3(0.5f));
 
             transparentWindowShader.use();
@@ -135,11 +207,11 @@ main()
             // cubeModel.Draw(texturedCubeShader);
             transparentWindowModel.Draw(transparentWindowShader);
         }
-        
-        //model = glm::mat4(1.0f);
-        //model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
-        //model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        //transparentWindowModel.Draw(transparentWindowShader);
+
+        // model = glm::mat4(1.0f);
+        // model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
+        // model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f,
+        // 0.0f)); transparentWindowModel.Draw(transparentWindowShader);
 
         // show fps in window name
         currentTime = glfwGetTime();
