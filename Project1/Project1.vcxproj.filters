@@ -91,6 +91,12 @@
     <FxCompile Include="FragmentShaderSolidColor.glsl">
       <Filter>FragmentShaders</Filter>
     </FxCompile>
+    <FxCompile Include="VertexShaderRenderbuffer.glsl">
+      <Filter>VertexShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="FragmentShaderRenderbuffer.glsl">
+      <Filter>FragmentShaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />

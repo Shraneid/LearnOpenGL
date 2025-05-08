@@ -13,6 +13,8 @@
 void
 processInput(GLFWwindow* window);
 void
+updateWindowNameWithFPS(GLFWwindow* window, string title);
+void
 framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void
 mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -21,7 +23,7 @@ scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
 int windowWidth = 1920, windowHeight = 1080;
 
-Camera camera = Camera(glm::vec3(0.0f, 0.0f, 3.0f));
+Camera camera = Camera(glm::vec3(0.0f, 0.0f, 5.0f));
 int lastX, lastY;
 
 // physics
@@ -37,27 +39,6 @@ int nbFrames = 0;
 
 // transformation matrices
 glm::mat4 model, view, projection;
-
-float
-translate1(float elapsedTime)
-{
-    return sin(elapsedTime);
-}
-float
-translate2(float elapsedTime)
-{
-    return sin(2 * elapsedTime);
-}
-float
-translate3(float elapsedTime)
-{
-    return sin(3 * elapsedTime);
-}
-float
-translate4(float elapsedTime)
-{
-    return sin(4 * elapsedTime);
-}
 
 int
 main()
@@ -94,145 +75,305 @@ main()
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_STENCIL_TEST);
     glEnable(GL_BLEND);
+    // glEnable(GL_CULL_FACE);
+
+    // glCullFace(GL_BACK);
 
     // blending setup
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glBlendEquation(GL_FUNC_ADD);
 
     // START OF CODE
+    unsigned int mainFramebuffer;
+    glGenFramebuffers(1, &mainFramebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, mainFramebuffer);
+
+    unsigned int mainTextureColorBuffer;
+    glGenTextures(1, &mainTextureColorBuffer);
+    glBindTexture(GL_TEXTURE_2D, mainTextureColorBuffer);
+
+    glTexImage2D(GL_TEXTURE_2D,
+                 0,
+                 GL_RGB,
+                 windowWidth,
+                 windowHeight,
+                 0,
+                 GL_RGB,
+                 GL_UNSIGNED_BYTE,
+                 NULL);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glFramebufferTexture2D(GL_FRAMEBUFFER,
+                           GL_COLOR_ATTACHMENT0,
+                           GL_TEXTURE_2D,
+                           mainTextureColorBuffer,
+                           0);
+
+    unsigned int mainRbo;
+    glGenRenderbuffers(1, &mainRbo);
+
+    glBindRenderbuffer(GL_RENDERBUFFER, mainRbo);
+    glRenderbufferStorage(
+      GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, windowWidth, windowHeight);
+
+    glFramebufferRenderbuffer(
+      GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, mainRbo);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!"
+                  << std::endl;
+    }
+
+    unsigned int mirrorFramebuffer;
+    glGenFramebuffers(1, &mirrorFramebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, mirrorFramebuffer);
+
+    unsigned int mirrorTextureColorBuffer;
+    glGenTextures(1, &mirrorTextureColorBuffer);
+    glBindTexture(GL_TEXTURE_2D, mirrorTextureColorBuffer);
+
+    glTexImage2D(GL_TEXTURE_2D,
+                 0,
+                 GL_RGB,
+                 windowWidth,
+                 windowHeight,
+                 0,
+                 GL_RGB,
+                 GL_UNSIGNED_BYTE,
+                 NULL);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glFramebufferTexture2D(GL_FRAMEBUFFER,
+                           GL_COLOR_ATTACHMENT0,
+                           GL_TEXTURE_2D,
+                           mirrorTextureColorBuffer,
+                           0);
+
+    unsigned int mirrorRbo;
+    glGenRenderbuffers(1, &mirrorRbo);
+
+    glBindRenderbuffer(GL_RENDERBUFFER, mirrorRbo);
+    glRenderbufferStorage(
+      GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, windowWidth, windowHeight);
+
+    glFramebufferRenderbuffer(
+      GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, mainRbo);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!"
+                  << std::endl;
+    }
+
+    // RESETTING FRAMEBUFFER
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     // COMPILING SHADERS
     Shader texturedCubeShader("VertexShaderModelBase.glsl",
                               "FragmentShaderModelBase.glsl");
     Shader transparentWindowShader("VertexShaderModelBase.glsl",
                                    "FragmentShaderModelTransparent.glsl");
+    Shader screenShader("VertexShaderRenderbuffer.glsl",
+                        "FragmentShaderRenderbuffer.glsl");
 
     string cubePath = "resources/models/textured_cube/cube.obj";
     Model cubeModel = Model(FileSystem::getPath(cubePath));
-
-    // string transparentWindowPath =
-    // "resources/models/transparent_window/transparent_window.obj"; Model
-    // transparentWindowModel =
-    // Model(FileSystem::getPath(transparentWindowPath));
 
     string transparentWindowPath = "resources/models/red_window/red_window.obj";
     Model transparentWindowModel =
       Model(FileSystem::getPath(transparentWindowPath));
 
-    // Wireframe mode
-    struct WindowStruct
-    {
-        glm::vec3 base_position;
-        glm::vec3 current_position;
-        float offset;
-        float (*function)(float);
-
-        float distance_to_camera;
-
-        bool operator<(const WindowStruct& other)
-        {
-            return distance_to_camera > other.distance_to_camera;
-        }
+    vector<glm::vec3> cubePositions = {
+        glm::vec3(0.0f, 0.0f, 0.0f),
+        glm::vec3(2.5f, 0.3f, -0.5f),
+        glm::vec3(1.0f, 0.5f, 10.0f),
     };
 
-    vector<WindowStruct> windows;
-    windows.push_back({ glm::vec3(0.5f, 0.0f, -1.0f),
-                        glm::vec3(0.5f, 0.0f, -1.0f),
-                        0.0f,
-                        translate1,
-                        0.0f });
-    windows.push_back({ glm::vec3(-1.5f, 0.0f, -0.5f),
-                        glm::vec3(-1.5f, 0.0f, -0.5f),
-                        0.0f,
-                        translate2,
-                        0.0f });
-    windows.push_back({ glm::vec3(1.5f, 0.0f, 0.5f),
-                        glm::vec3(1.5f, 0.0f, 0.5f),
-                        0.0f,
-                        translate3,
-                        0.0f });
-    windows.push_back({ glm::vec3(0.0f, 0.0f, 0.7f),
-                        glm::vec3(0.0f, 0.0f, 0.7f),
-                        0.0f,
-                        translate4,
-                        0.0f });
+    float vertices[] = {
+        // positions  // texCoords
+        -1.0f, +1.0f, 0.0f,  1.0f,  -1.0f, -1.0f,
+        0.0f,  0.0f,  +1.0f, -1.0f, 1.0f,  0.0f,
+
+        -1.0f, +1.0f, 0.0f,  1.0f,  +1.0f, -1.0f,
+        1.0f,  0.0f,  +1.0f, +1.0f, 1.0f,  1.0f,
+    };
+
+    unsigned int quadVBO, quadVAO;
+
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+
+    glBindVertexArray(quadVAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(
+      0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GL_FLOAT), (void*)0);
+
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1,
+                          2,
+                          GL_FLOAT,
+                          GL_FALSE,
+                          4 * sizeof(GL_FLOAT),
+                          (void*)(2 * sizeof(float)));
+
+    float mirrorVertices[] = { // only take a small part of the top of the screen
+        // positions  // texCoords
+        -0.6f, +0.95f, 0.0f,  1.0f,  
+        -0.6f, +0.70f, 0.0f,  0.0f,
+        +0.6f, +0.70f, 1.0f,  0.0f,  
+
+        -0.6f, +0.95f, 0.0f,  1.0f,  
+        +0.6f, +0.70f, 1.0f,  0.0f,  
+        +0.6f, +0.95f, 1.0f,  1.0f,
+    };
+
+    unsigned int mirrorVBO, mirrorVAO;
+
+    glGenVertexArrays(1, &mirrorVAO);
+    glGenBuffers(1, &mirrorVBO);
+
+    glBindVertexArray(mirrorVAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, mirrorVBO);
+    glBufferData(
+      GL_ARRAY_BUFFER, sizeof(mirrorVertices), mirrorVertices, GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(
+      0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GL_FLOAT), (void*)0);
+
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1,
+                          2,
+                          GL_FLOAT,
+                          GL_FALSE,
+                          4 * sizeof(GL_FLOAT),
+                          (void*)(2 * sizeof(float)));
 
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
 
-        // SETTINGS
-        glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        // physics
+        // PHYSICS
         elapsedTime = (float)glfwGetTime();
 
         float currentFrame = (float)glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        // rendering
+        // SET MIRROR FRAMEBUFFER
+        glBindFramebuffer(GL_FRAMEBUFFER, mirrorFramebuffer);
+        glClearColor(0.1f, 0.1f, 0.1f, 0.1f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glEnable(GL_DEPTH_TEST);
+
+        // MIRROR RENDERING SETUP
+        view = camera.GetFlippedViewMatrix();
+        projection = glm::perspective(glm::radians(camera.Zoom),
+                                      (float)windowWidth / (float)windowHeight,
+                                      0.1f,
+                                      100.0f);
+
+        // DRAW TO MIRROR FRAMEBUFFER
+        for (auto position : cubePositions) {
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, position);
+
+            texturedCubeShader.use();
+
+            texturedCubeShader.setMat4("model", model);
+            texturedCubeShader.setMat4("view", view);
+            texturedCubeShader.setMat4("projection", projection);
+
+            cubeModel.Draw(texturedCubeShader);
+        }
+
+        // MAIN RENDERING SETUP
         view = camera.GetViewMatrix();
         projection = glm::perspective(glm::radians(camera.Zoom),
                                       (float)windowWidth / (float)windowHeight,
                                       0.1f,
                                       100.0f);
 
-        for (WindowStruct& window : windows) {
-            window.offset = window.function(elapsedTime);
+        // SET MAIN FRAMEBUFFER
+        glBindFramebuffer(GL_FRAMEBUFFER, mainFramebuffer);
+        glClearColor(0.1f, 0.1f, 0.1f, 0.1f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glEnable(GL_DEPTH_TEST);
 
-            window.current_position = { window.base_position.x + window.offset,
-                                   window.base_position.y,
-                                   window.base_position.z };
-            glm::vec3 camera_to_window_vector = window.current_position - camera.Position;
-            window.distance_to_camera = glm::dot(camera_to_window_vector, camera_to_window_vector);
-        }
-
-        std::sort(windows.begin(), windows.end());
-
-        // main model
-        for (WindowStruct& window : windows) {
+        // DRAW TO MAIN FRAMEBUFFER
+        for (auto position : cubePositions) {
             model = glm::mat4(1.0f);
-            model = glm::translate(model, window.current_position);
-            model = glm::rotate(
-              model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-            model = glm::scale(model, glm::vec3(0.5f));
+            model = glm::translate(model, position);
 
-            transparentWindowShader.use();
+            texturedCubeShader.use();
 
-            transparentWindowShader.setMat4("model", model);
-            transparentWindowShader.setMat4("view", view);
-            transparentWindowShader.setMat4("projection", projection);
+            texturedCubeShader.setMat4("model", model);
+            texturedCubeShader.setMat4("view", view);
+            texturedCubeShader.setMat4("projection", projection);
 
-            // cubeModel.Draw(texturedCubeShader);
-            transparentWindowModel.Draw(transparentWindowShader);
+            cubeModel.Draw(texturedCubeShader);
         }
 
-        // model = glm::mat4(1.0f);
-        // model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
-        // model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f,
-        // 0.0f)); transparentWindowModel.Draw(transparentWindowShader);
+        // RESET TO DEFAULT FRAMEBUFFER
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glClearColor(0.1f, 0.1f, 0.1f, 0.1f);
+        glClear(GL_COLOR_BUFFER_BIT);
 
-        // show fps in window name
-        currentTime = glfwGetTime();
-        delta = currentTime - lastTime;
+        // DRAW MAIN TO FULLSCREEN QUAD
+        screenShader.use();
+        screenShader.setInt("screenTexture", 0);
+        glBindVertexArray(quadVAO);
+        glDisable(GL_DEPTH_TEST);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, mainTextureColorBuffer);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
 
-        if (delta >= 1.0) {
-            glfwSetWindowTitle(
-              window, (title + "\t" + to_string(nbFrames) + "FPS").c_str());
-            nbFrames = 0;
-            lastTime = currentTime;
-        } else {
-            nbFrames++;
-        }
+        // DRAW MIRROR TO TOP OF THE SCREEN QUAD
+        screenShader.use();
+        screenShader.setInt("screenTexture", 0);
+        glBindVertexArray(mirrorVAO);
+        glDisable(GL_DEPTH_TEST);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, mirrorTextureColorBuffer);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        updateWindowNameWithFPS(window, title);
 
         // finish up frame
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
+    glDeleteVertexArrays(1, &quadVAO);
+    glDeleteBuffers(1, &quadVBO);
+    glDeleteRenderbuffers(1, &mainRbo);
+    glDeleteFramebuffers(1, &mainFramebuffer);
+
     glfwTerminate();
     return 0;
+}
+
+void
+updateWindowNameWithFPS(GLFWwindow* window, string title)
+{
+    currentTime = glfwGetTime();
+    delta = currentTime - lastTime;
+
+    if (delta >= 1.0) {
+        glfwSetWindowTitle(
+          window, (title + "\t" + to_string(nbFrames) + "FPS").c_str());
+        nbFrames = 0;
+        lastTime = currentTime;
+    } else {
+        nbFrames++;
+    }
 }
 
 void

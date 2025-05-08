@@ -65,6 +65,12 @@ public:
     {
         return glm::lookAt(Position, Position + Front, Up);
     }
+    
+    // returns the view matrix calculated using Euler Angles and the LookAt Matrix
+    glm::mat4 GetFlippedViewMatrix()
+    {
+        return glm::lookAt(Position, Position - Front, Up);
+    }
 
     // processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
     void ProcessKeyboard(Camera_Movement direction, float deltaTime)
@@ -128,6 +134,13 @@ public:
             Zoom = 1.0f;
         if (Zoom > 45.0f)
             Zoom = 45.0f;
+    }
+
+    void Flip()
+    { 
+        Yaw = Yaw - 180.0;
+        Pitch = -Pitch;
+        updateCameraVectors();
     }
 
 
