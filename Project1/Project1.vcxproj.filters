@@ -97,6 +97,12 @@
     <FxCompile Include="FragmentShaderRenderbuffer.glsl">
       <Filter>FragmentShaders</Filter>
     </FxCompile>
+    <FxCompile Include="FragmentShaderCubemap.glsl">
+      <Filter>FragmentShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="VertexShaderCubemap.glsl">
+      <Filter>VertexShaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />
