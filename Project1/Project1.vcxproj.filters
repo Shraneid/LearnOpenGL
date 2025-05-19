@@ -103,6 +103,18 @@
     <FxCompile Include="VertexShaderCubemap.glsl">
       <Filter>VertexShaders</Filter>
     </FxCompile>
+    <FxCompile Include="VertexShaderEnvironmentMapReflection.glsl">
+      <Filter>VertexShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="FragmentShaderEnvironmentMapReflection.glsl">
+      <Filter>FragmentShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="VertexShaderEnvironmentMapRefraction.glsl">
+      <Filter>VertexShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="FragmentShaderEnvironmentMapRefraction.glsl">
+      <Filter>FragmentShaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />
