@@ -53,6 +53,9 @@ glm::mat4 model, view, projection;
 unsigned int skyboxVBO, skyboxVAO;
 int skyboxTextureId;
 
+// uniform matrices setup
+unsigned int uboMatrixBlock;
+
 int
 main()
 {
@@ -215,8 +218,8 @@ main()
     string cubePath = "resources/models/textured_cube/cube.obj";
     Model cubeModel = Model(FileSystem::getPath(cubePath));
 
-    //string backpackPath = "resources/models/backpack/backpack.obj";
-    //Model backpackModel = Model(FileSystem::getPath(backpackPath));
+    // string backpackPath = "resources/models/backpack/backpack.obj";
+    // Model backpackModel = Model(FileSystem::getPath(backpackPath));
 
     string transparentWindowPath = "resources/models/red_window/red_window.obj";
     Model transparentWindowModel =
@@ -394,6 +397,16 @@ main()
                           5 * sizeof(GL_FLOAT),
                           (void*)(3 * sizeof(float)));
 
+    // SETTING UP MAIN TRANSFORM MATRICES BLOCK
+    glGenBuffers(1, &uboMatrixBlock);
+    glBindBuffer(GL_UNIFORM_BUFFER, uboMatrixBlock);
+    glBufferData(GL_UNIFORM_BUFFER,
+                 128,
+                 NULL,
+                 GL_STATIC_DRAW); // 2 * mat4 (64bits)
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    // END SETTING UP MAIN TRANSFORMS
+
     while (!glfwWindowShouldClose(window))
     {
         processInput(window);
@@ -412,17 +425,16 @@ main()
         glEnable(GL_DEPTH_TEST);
 
         // MIRROR RENDERING SETUP
-        //view = camera.GetFlippedViewMatrix();
-        //projection = glm::perspective(glm::radians(camera.Zoom),
-        //                              (float)windowWidth / (float)windowHeight,
-        //                              0.1f,
-        //                              100.0f);
+        // view = camera.GetFlippedViewMatrix();
+        // projection = glm::perspective(glm::radians(camera.Zoom),
+        //                              (float)windowWidth /
+        //                              (float)windowHeight, 0.1f, 100.0f);
 
-        //drawScene(mirrorTextureColorBuffer,
-        //          cubePositions,
-        //          cubeModel,
-        //          texturedCubeShader,
-        //          skyboxShader);
+        // drawScene(mirrorTextureColorBuffer,
+        //           cubePositions,
+        //           cubeModel,
+        //           texturedCubeShader,
+        //           skyboxShader);
 
         // MAIN RENDERING SETUP
         view = camera.GetViewMatrix();
@@ -503,8 +515,23 @@ drawScene(unsigned int framebuffer,
         modelShader.use();
 
         modelShader.setMat4("model", model);
-        modelShader.setMat4("view", view);
-        modelShader.setMat4("projection", projection);
+
+        glBindBuffer(GL_UNIFORM_BUFFER, uboMatrixBlock);
+        glBufferSubData(GL_UNIFORM_BUFFER,
+                        0,
+                        sizeof(view),
+                        glm::value_ptr(view));
+        glBufferSubData(GL_UNIFORM_BUFFER,
+                        64,
+                        sizeof(projection),
+                        glm::value_ptr(projection));
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+        modelShader.setUniformBlock("MatricesBlock", uboMatrixBlock);
+
+        // modelShader.setMat4("model", model);
+        // modelShader.setMat4("view", view);
+        // modelShader.setMat4("projection", projection);
 
         if (environmentMappingTextureId >= 0)
         {
