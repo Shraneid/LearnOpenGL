@@ -519,19 +519,15 @@ drawScene(unsigned int framebuffer,
         glBindBuffer(GL_UNIFORM_BUFFER, uboMatrixBlock);
         glBufferSubData(GL_UNIFORM_BUFFER,
                         0,
-                        sizeof(view),
+                        sizeof(glm::mat4),
                         glm::value_ptr(view));
         glBufferSubData(GL_UNIFORM_BUFFER,
-                        64,
-                        sizeof(projection),
+                        sizeof(glm::mat4),
+                        sizeof(glm::mat4),
                         glm::value_ptr(projection));
         glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
         modelShader.setUniformBlock("MatricesBlock", uboMatrixBlock);
-
-        // modelShader.setMat4("model", model);
-        // modelShader.setMat4("view", view);
-        // modelShader.setMat4("projection", projection);
 
         if (environmentMappingTextureId >= 0)
         {
