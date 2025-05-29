@@ -198,8 +198,12 @@ main()
                                     "GeometryShaderExplodedReflection.glsl",
                                     "FragmentShaderExplodedReflection.glsl");
 
+    Shader drawnNormalsShader("VertexShaderDrawnNormals.glsl",
+                              "GeometryShaderDrawnNormals.glsl",
+                              "FragmentShaderDrawnNormals.glsl");
+
     string cubePath = "resources/models/textured_cube/cube.obj";
-    //Model modelToDraw = Model(FileSystem::getPath(cubePath));
+    // Model modelToDraw = Model(FileSystem::getPath(cubePath));
 
     string backpackPath = "resources/models/backpack/backpack.obj";
     Model modelToDraw = Model(FileSystem::getPath(backpackPath));
@@ -259,6 +263,25 @@ main()
         glDisable(GL_CULL_FACE);
         modelToDraw.Draw(reflectiveExplodedShader);
         glEnable(GL_CULL_FACE);
+
+        // DRAW NORMALS
+        drawnNormalsShader.use();
+        drawnNormalsShader.setMat4("model", model);
+        glBindBuffer(GL_UNIFORM_BUFFER, uboMatrixBlock);
+        glBufferSubData(GL_UNIFORM_BUFFER,
+                        0,
+                        sizeof(view),
+                        glm::value_ptr(view));
+        glBufferSubData(GL_UNIFORM_BUFFER,
+                        64,
+                        sizeof(projection),
+                        glm::value_ptr(projection));
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);
+        drawnNormalsShader.setUniformBlock("MatricesBlock",
+                                                 uboMatrixBlock);
+
+        modelToDraw.Draw(drawnNormalsShader);
+        // END DRAW NORMALS
 
         // DRAW SKYBOX
         glDepthFunc(GL_LEQUAL);

@@ -136,6 +136,15 @@
     <FxCompile Include="FragmentShaderExplodedReflection.glsl">
       <Filter>FragmentShaders</Filter>
     </FxCompile>
+    <FxCompile Include="FragmentShaderDrawnNormals.glsl">
+      <Filter>FragmentShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="GeometryShaderDrawnNormals.glsl">
+      <Filter>GeometryShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="VertexShaderDrawnNormals.glsl">
+      <Filter>VertexShaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />
