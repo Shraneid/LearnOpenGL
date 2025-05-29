@@ -19,6 +19,9 @@
     <Filter Include="VertexShaders">
       <UniqueIdentifier>{2e29a624-8f56-467e-9246-f16e177a30ca}</UniqueIdentifier>
     </Filter>
+    <Filter Include="GeometryShaders">
+      <UniqueIdentifier>{b6313815-cf3a-480c-b8c8-8e1dcdcbca59}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source.cpp">
@@ -114,6 +117,15 @@
     </FxCompile>
     <FxCompile Include="FragmentShaderEnvironmentMapRefraction.glsl">
       <Filter>FragmentShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="VertexShaderForGeometryShader.glsl">
+      <Filter>VertexShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="FragmentShaderForGeometryShader.glsl">
+      <Filter>FragmentShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="GeometryShaderBase.glsl">
+      <Filter>GeometryShaders</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

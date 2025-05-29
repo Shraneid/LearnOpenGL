@@ -93,254 +93,41 @@ main()
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_STENCIL_TEST);
     glEnable(GL_BLEND);
-    // glEnable(GL_CULL_FACE);
-
-    // glCullFace(GL_BACK);
 
     // blending setup
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glBlendEquation(GL_FUNC_ADD);
 
     // START OF CODE
-    unsigned int mainFramebuffer;
-    glGenFramebuffers(1, &mainFramebuffer);
-    glBindFramebuffer(GL_FRAMEBUFFER, mainFramebuffer);
-
-    unsigned int mainTextureColorBuffer;
-    glGenTextures(1, &mainTextureColorBuffer);
-    glBindTexture(GL_TEXTURE_2D, mainTextureColorBuffer);
-
-    glTexImage2D(GL_TEXTURE_2D,
-                 0,
-                 GL_RGB,
-                 windowWidth,
-                 windowHeight,
-                 0,
-                 GL_RGB,
-                 GL_UNSIGNED_BYTE,
-                 NULL);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    glFramebufferTexture2D(GL_FRAMEBUFFER,
-                           GL_COLOR_ATTACHMENT0,
-                           GL_TEXTURE_2D,
-                           mainTextureColorBuffer,
-                           0);
-
-    unsigned int mainRbo;
-    glGenRenderbuffers(1, &mainRbo);
-
-    glBindRenderbuffer(GL_RENDERBUFFER, mainRbo);
-    glRenderbufferStorage(GL_RENDERBUFFER,
-                          GL_DEPTH24_STENCIL8,
-                          windowWidth,
-                          windowHeight);
-
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER,
-                              GL_DEPTH_STENCIL_ATTACHMENT,
-                              GL_RENDERBUFFER,
-                              mainRbo);
-
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-    {
-        std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!"
-                  << std::endl;
-    }
-
-    unsigned int mirrorFramebuffer;
-    glGenFramebuffers(1, &mirrorFramebuffer);
-    glBindFramebuffer(GL_FRAMEBUFFER, mirrorFramebuffer);
-
-    unsigned int mirrorTextureColorBuffer;
-    glGenTextures(1, &mirrorTextureColorBuffer);
-    glBindTexture(GL_TEXTURE_2D, mirrorTextureColorBuffer);
-
-    glTexImage2D(GL_TEXTURE_2D,
-                 0,
-                 GL_RGB,
-                 windowWidth,
-                 windowHeight,
-                 0,
-                 GL_RGB,
-                 GL_UNSIGNED_BYTE,
-                 NULL);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    glFramebufferTexture2D(GL_FRAMEBUFFER,
-                           GL_COLOR_ATTACHMENT0,
-                           GL_TEXTURE_2D,
-                           mirrorTextureColorBuffer,
-                           0);
-
-    unsigned int mirrorRbo;
-    glGenRenderbuffers(1, &mirrorRbo);
-
-    glBindRenderbuffer(GL_RENDERBUFFER, mirrorRbo);
-    glRenderbufferStorage(GL_RENDERBUFFER,
-                          GL_DEPTH24_STENCIL8,
-                          windowWidth,
-                          windowHeight);
-
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER,
-                              GL_DEPTH_STENCIL_ATTACHMENT,
-                              GL_RENDERBUFFER,
-                              mirrorRbo);
-
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-    {
-        std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!"
-                  << std::endl;
-    }
-
-    // RESETTING FRAMEBUFFER
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     // COMPILING SHADERS
-    Shader texturedCubeShader("VertexShaderModelBase.glsl",
-                              "FragmentShaderModelBase.glsl");
-    Shader reflectiveTexturedCubeShader(
-      "VertexShaderEnvironmentMapReflection.glsl",
-      "FragmentShaderEnvironmentMapReflection.glsl");
-    Shader refractiveTexturedCubeShader(
-      "VertexShaderEnvironmentMapRefraction.glsl",
-      "FragmentShaderEnvironmentMapRefraction.glsl");
-    Shader transparentWindowShader("VertexShaderModelBase.glsl",
-                                   "FragmentShaderModelTransparent.glsl");
-    Shader screenShader("VertexShaderRenderbuffer.glsl",
-                        "FragmentShaderRenderbuffer.glsl");
-    Shader skyboxShader("VertexShaderCubemap.glsl",
-                        "FragmentShaderCubemap.glsl");
+    Shader geometryShader("VertexShaderForGeometryShader.glsl",
+                          "GeometryShaderBase.glsl",
+                          "FragmentShaderForGeometryShader.glsl");
 
-    string cubePath = "resources/models/textured_cube/cube.obj";
-    Model cubeModel = Model(FileSystem::getPath(cubePath));
-
-    // string backpackPath = "resources/models/backpack/backpack.obj";
-    // Model backpackModel = Model(FileSystem::getPath(backpackPath));
-
-    string transparentWindowPath = "resources/models/red_window/red_window.obj";
-    Model transparentWindowModel =
-      Model(FileSystem::getPath(transparentWindowPath));
-
-    // SKYBOX
     // clang-format off
-    float skyboxVertices[] = {
-        // positions
-        -1.0f, 1.0f,  -1.0f,
-        -1.0f, -1.0f, -1.0f,
-        1.0f,  -1.0f, -1.0f,
-        1.0f,  -1.0f, -1.0f,
-        1.0f,  1.0f,  -1.0f,
-        -1.0f, 1.0f,  -1.0f,
-
-        -1.0f, -1.0f, 1.0f,
-        -1.0f, -1.0f, -1.0f,
-        -1.0f, 1.0f,  -1.0f,
-        -1.0f, 1.0f,  -1.0f,
-        -1.0f, 1.0f,  1.0f,
-        -1.0f, -1.0f, 1.0f,
-
-        1.0f,  -1.0f, -1.0f,
-        1.0f,  -1.0f, 1.0f,
-        1.0f,  1.0f,  1.0f,
-        1.0f,  1.0f,  1.0f,
-        1.0f,  1.0f,  -1.0f,
-        1.0f,  -1.0f, -1.0f,
-
-        -1.0f, -1.0f, 1.0f,
-        -1.0f, 1.0f,  1.0f,
-        1.0f,  1.0f,  1.0f,
-
-        1.0f,  1.0f,  1.0f,
-        1.0f,  -1.0f, 1.0f,
-        -1.0f, -1.0f, 1.0f,
-
-        -1.0f, 1.0f,  -1.0f,
-        1.0f,  1.0f,  -1.0f,
-        1.0f,  1.0f,  1.0f,
-        1.0f,  1.0f,  1.0f,
-        -1.0f, 1.0f,  1.0f,
-        -1.0f, 1.0f,  -1.0f,
-
-        -1.0f, -1.0f, -1.0f,
-        -1.0f, -1.0f, 1.0f,
-        1.0f,  -1.0f, -1.0f,
-        1.0f,  -1.0f, -1.0f,
-        -1.0f, -1.0f, 1.0f,
-        1.0f,  -1.0f, 1.0f
+    float points[] = {
+        // positions // colors
+        -0.5f, +0.5f, 1.0f, 0.0f, 0.0f,
+        +0.5f, +0.5f, 0.0f, 1.0f, 0.0f,
+        -0.5f, -0.5f, 0.0f, 0.0f, 1.0f,
+        +0.5f, -0.5f, 1.0f, 1.0f, 0.0f,
     };
     // clang-format on
 
-    glGenVertexArrays(1, &skyboxVAO);
-    glGenBuffers(1, &skyboxVBO);
+    unsigned int pointsVBO, pointsVAO;
 
-    glBindVertexArray(skyboxVAO);
+    glGenVertexArrays(1, &pointsVAO);
+    glGenBuffers(1, &pointsVBO);
 
-    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
-    glBufferData(GL_ARRAY_BUFFER,
-                 sizeof(skyboxVertices),
-                 skyboxVertices,
-                 GL_STATIC_DRAW);
+    glBindVertexArray(pointsVAO);
 
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0,
-                          3,
-                          GL_FLOAT,
-                          GL_FALSE,
-                          3 * sizeof(GL_FLOAT),
-                          (void*)0);
-
-    vector<string> faces_filepath = {
-        "resources/cubemaps/yokohama/posx.jpg",
-        "resources/cubemaps/yokohama/negx.jpg",
-        "resources/cubemaps/yokohama/posy.jpg",
-        "resources/cubemaps/yokohama/negy.jpg",
-        "resources/cubemaps/yokohama/posz.jpg",
-        "resources/cubemaps/yokohama/negz.jpg",
-    };
-
-    skyboxTextureId = loadCubemap(faces_filepath);
-
-    // END SKYBOX
-
-    vector<glm::vec3> cubePositions = {
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(2.5f, 0.3f, -0.5f),
-        glm::vec3(1.0f, 0.5f, 10.0f),
-    };
-
-    // clang-format off
-    float screenQuadVertices[] = {
-        // positions        // texCoords
-        -1.0f, +1.0f, 1.0f, 0.0f,  1.0f,  
-        -1.0f, -1.0f, 1.0f, 0.0f,  0.0f,
-        +1.0f, -1.0f, 1.0f, 1.0f,  0.0f,
-                      
-        -1.0f, +1.0f, 1.0f, 0.0f,  1.0f,
-        +1.0f, -1.0f, 1.0f, 1.0f,  0.0f,  
-        +1.0f, +1.0f, 1.0f, 1.0f,  1.0f,
-    };
-    // clang-format on
-
-    unsigned int screenQuadVBO, screenQuadVAO;
-
-    glGenVertexArrays(1, &screenQuadVAO);
-    glGenBuffers(1, &screenQuadVBO);
-
-    glBindVertexArray(screenQuadVAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, screenQuadVBO);
-    glBufferData(GL_ARRAY_BUFFER,
-                 sizeof(screenQuadVertices),
-                 screenQuadVertices,
-                 GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, pointsVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(points), points, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0,
-                          3,
+                          2,
                           GL_FLOAT,
                           GL_FALSE,
                           5 * sizeof(GL_FLOAT),
@@ -348,64 +135,11 @@ main()
 
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1,
-                          2,
-                          GL_FLOAT,
-                          GL_FALSE,
-                          5 * sizeof(GL_FLOAT),
-                          (void*)(3 * sizeof(float)));
-
-    // clang-format off
-    float mirrorVertices[] = {
-        // only take a small part of the top of the screen
-        // positions         // texCoords
-        -0.6f, +0.95f, 0.9f, 0.0f,  1.0f,   
-        -0.6f, +0.70f, 0.9f, 0.0f,  0.5,    
-        +0.6f, +0.70f, 0.9f, 1.0f,  0.5f,
-                       
-        -0.6f, +0.95f, 0.9f, 0.0f,  1.0f,   
-        +0.6f, +0.70f, 0.9f, 1.0f,  0.5f,   
-        +0.6f, +0.95f, 0.9f, 1.0f,  1.0f,
-    };
-    // clang-format on
-
-    unsigned int mirrorVBO, mirrorVAO;
-
-    glGenVertexArrays(1, &mirrorVAO);
-    glGenBuffers(1, &mirrorVBO);
-
-    glBindVertexArray(mirrorVAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, mirrorVBO);
-    glBufferData(GL_ARRAY_BUFFER,
-                 sizeof(mirrorVertices),
-                 mirrorVertices,
-                 GL_STATIC_DRAW);
-
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0,
                           3,
                           GL_FLOAT,
                           GL_FALSE,
                           5 * sizeof(GL_FLOAT),
-                          (void*)0);
-
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1,
-                          2,
-                          GL_FLOAT,
-                          GL_FALSE,
-                          5 * sizeof(GL_FLOAT),
-                          (void*)(3 * sizeof(float)));
-
-    // SETTING UP MAIN TRANSFORM MATRICES BLOCK
-    glGenBuffers(1, &uboMatrixBlock);
-    glBindBuffer(GL_UNIFORM_BUFFER, uboMatrixBlock);
-    glBufferData(GL_UNIFORM_BUFFER,
-                 128,
-                 NULL,
-                 GL_STATIC_DRAW); // 2 * mat4 (64bits)
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
-    // END SETTING UP MAIN TRANSFORMS
+                          (void*)(2 * sizeof(float)));
 
     while (!glfwWindowShouldClose(window))
     {
@@ -418,62 +152,12 @@ main()
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        // SET MIRROR FRAMEBUFFER
-        glBindFramebuffer(GL_FRAMEBUFFER, mirrorFramebuffer);
-        glClearColor(0.1f, 0.1f, 0.1f, 0.1f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glEnable(GL_DEPTH_TEST);
-
-        // MIRROR RENDERING SETUP
-        // view = camera.GetFlippedViewMatrix();
-        // projection = glm::perspective(glm::radians(camera.Zoom),
-        //                              (float)windowWidth /
-        //                              (float)windowHeight, 0.1f, 100.0f);
-
-        // drawScene(mirrorTextureColorBuffer,
-        //           cubePositions,
-        //           cubeModel,
-        //           texturedCubeShader,
-        //           skyboxShader);
-
-        // MAIN RENDERING SETUP
-        view = camera.GetViewMatrix();
-        projection = glm::perspective(glm::radians(camera.Zoom),
-                                      (float)windowWidth / (float)windowHeight,
-                                      0.1f,
-                                      100.0f);
-
-        drawScene(mainTextureColorBuffer,
-                  cubePositions,
-                  cubeModel,
-                  refractiveTexturedCubeShader,
-                  skyboxShader,
-                  skyboxTextureId);
-
-        // RESET TO DEFAULT FRAMEBUFFER
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glClearColor(0.1f, 0.1f, 0.1f, 0.1f);
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // ENABLE DEPTH TESTING TO NOT OVERDRAW BEHIND THE MIRROR
-        glEnable(GL_DEPTH_TEST);
-        glDepthFunc(GL_LEQUAL);
-
-        // DRAW MIRROR TO TOP OF THE SCREEN QUAD
-        // screenShader.use();
-        // screenShader.setInt("screenTexture", 0);
-        // glBindVertexArray(mirrorVAO);
-        // glActiveTexture(GL_TEXTURE0);
-        // glBindTexture(GL_TEXTURE_2D, mirrorTextureColorBuffer);
-        // glDrawArrays(GL_TRIANGLES, 0, 6);
-
-        // DRAW MAIN TO FULLSCREEN QUAD
-        screenShader.use();
-        screenShader.setInt("screenTexture", 0);
-        glBindVertexArray(screenQuadVAO);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, mainTextureColorBuffer);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        geometryShader.use();
+        glBindVertexArray(pointsVAO);
+        glDrawArrays(GL_POINTS, 0, 4);
 
         updateWindowNameWithFPS(window, title);
 
@@ -482,78 +166,11 @@ main()
         glfwPollEvents();
     }
 
-    glDeleteVertexArrays(1, &screenQuadVAO);
-    glDeleteBuffers(1, &screenQuadVBO);
-    glDeleteRenderbuffers(1, &mainRbo);
-    glDeleteFramebuffers(1, &mainFramebuffer);
+    glDeleteVertexArrays(1, &pointsVAO);
+    glDeleteBuffers(1, &pointsVBO);
 
     glfwTerminate();
     return 0;
-}
-
-void
-drawScene(unsigned int framebuffer,
-          vector<glm::vec3> positions,
-          Model modelToDraw,
-          Shader modelShader,
-          Shader skyboxShader,
-          int environmentMappingTextureId)
-{
-    // SET FRAMEBUFFER
-    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-    glClearColor(0.1f, 0.1f, 0.1f, 0.1f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
-
-    // DRAW TO MAIN FRAMEBUFFER
-    for (auto position : positions)
-    {
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, position);
-
-        modelShader.use();
-
-        modelShader.setMat4("model", model);
-
-        glBindBuffer(GL_UNIFORM_BUFFER, uboMatrixBlock);
-        glBufferSubData(GL_UNIFORM_BUFFER,
-                        0,
-                        sizeof(glm::mat4),
-                        glm::value_ptr(view));
-        glBufferSubData(GL_UNIFORM_BUFFER,
-                        sizeof(glm::mat4),
-                        sizeof(glm::mat4),
-                        glm::value_ptr(projection));
-        glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-        modelShader.setUniformBlock("MatricesBlock", uboMatrixBlock);
-
-        if (environmentMappingTextureId >= 0)
-        {
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTextureId);
-            modelShader.setInt("skybox", 0);
-            modelShader.setVec3("viewPos", camera.Position);
-        }
-
-        modelToDraw.Draw(modelShader);
-    }
-
-    // DRAW SKYBOX
-    glDepthFunc(GL_LEQUAL);
-
-    skyboxShader.use();
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTextureId);
-    skyboxShader.setInt("skybox", 0);
-    skyboxShader.setMat4("view", glm::mat4(glm::mat3(view)));
-    skyboxShader.setMat4("projection", projection);
-
-    glBindVertexArray(skyboxVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
-
-    glDepthFunc(GL_LESS);
 }
 
 void

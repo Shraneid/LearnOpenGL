@@ -133,6 +133,18 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <FileType>Document</FileType>
     </FxCompile>
+    <FxCompile Include="VertexShaderForGeometryShader.glsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <FileType>Document</FileType>
+    </FxCompile>
+    <FxCompile Include="FragmentShaderForGeometryShader.glsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <FileType>Document</FileType>
+    </FxCompile>
+    <FxCompile Include="GeometryShaderBase.glsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <FileType>Document</FileType>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\README.gif" />
