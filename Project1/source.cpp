@@ -100,46 +100,109 @@ main()
 
     // START OF CODE
 
-    // COMPILING SHADERS
-    Shader geometryShader("VertexShaderForGeometryShader.glsl",
-                          "GeometryShaderBase.glsl",
-                          "FragmentShaderForGeometryShader.glsl");
-
+    // SKYBOX
     // clang-format off
-    float points[] = {
-        // positions // colors
-        -0.5f, +0.5f, 1.0f, 0.0f, 0.0f,
-        +0.5f, +0.5f, 0.0f, 1.0f, 0.0f,
-        -0.5f, -0.5f, 0.0f, 0.0f, 1.0f,
-        +0.5f, -0.5f, 1.0f, 1.0f, 0.0f,
+    float skyboxVertices[] = {
+        // positions
+        -1.0f, 1.0f,  -1.0f,
+        -1.0f, -1.0f, -1.0f,
+        1.0f,  -1.0f, -1.0f,
+        1.0f,  -1.0f, -1.0f,
+        1.0f,  1.0f,  -1.0f,
+        -1.0f, 1.0f,  -1.0f,
+
+        -1.0f, -1.0f, 1.0f,
+        -1.0f, -1.0f, -1.0f,
+        -1.0f, 1.0f,  -1.0f,
+        -1.0f, 1.0f,  -1.0f,
+        -1.0f, 1.0f,  1.0f,
+        -1.0f, -1.0f, 1.0f,
+
+        1.0f,  -1.0f, -1.0f,
+        1.0f,  -1.0f, 1.0f,
+        1.0f,  1.0f,  1.0f,
+        1.0f,  1.0f,  1.0f,
+        1.0f,  1.0f,  -1.0f,
+        1.0f,  -1.0f, -1.0f,
+
+        -1.0f, -1.0f, 1.0f,
+        -1.0f, 1.0f,  1.0f,
+        1.0f,  1.0f,  1.0f,
+
+        1.0f,  1.0f,  1.0f,
+        1.0f,  -1.0f, 1.0f,
+        -1.0f, -1.0f, 1.0f,
+
+        -1.0f, 1.0f,  -1.0f,
+        1.0f,  1.0f,  -1.0f,
+        1.0f,  1.0f,  1.0f,
+        1.0f,  1.0f,  1.0f,
+        -1.0f, 1.0f,  1.0f,
+        -1.0f, 1.0f,  -1.0f,
+
+        -1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f, 1.0f,
+        1.0f,  -1.0f, -1.0f,
+        1.0f,  -1.0f, -1.0f,
+        -1.0f, -1.0f, 1.0f,
+        1.0f,  -1.0f, 1.0f
     };
     // clang-format on
 
-    unsigned int pointsVBO, pointsVAO;
+    glGenVertexArrays(1, &skyboxVAO);
+    glGenBuffers(1, &skyboxVBO);
 
-    glGenVertexArrays(1, &pointsVAO);
-    glGenBuffers(1, &pointsVBO);
+    glBindVertexArray(skyboxVAO);
 
-    glBindVertexArray(pointsVAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, pointsVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(points), points, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+    glBufferData(GL_ARRAY_BUFFER,
+                 sizeof(skyboxVertices),
+                 skyboxVertices,
+                 GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0,
-                          2,
-                          GL_FLOAT,
-                          GL_FALSE,
-                          5 * sizeof(GL_FLOAT),
-                          (void*)0);
-
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1,
                           3,
                           GL_FLOAT,
                           GL_FALSE,
-                          5 * sizeof(GL_FLOAT),
-                          (void*)(2 * sizeof(float)));
+                          3 * sizeof(GL_FLOAT),
+                          (void*)0);
+
+    vector<string> faces_filepath = {
+        "resources/cubemaps/yokohama/posx.jpg",
+        "resources/cubemaps/yokohama/negx.jpg",
+        "resources/cubemaps/yokohama/posy.jpg",
+        "resources/cubemaps/yokohama/negy.jpg",
+        "resources/cubemaps/yokohama/posz.jpg",
+        "resources/cubemaps/yokohama/negz.jpg",
+    };
+
+    skyboxTextureId = loadCubemap(faces_filepath);
+    // END SKYBOX
+
+    // SETTING UP MAIN TRANSFORM MATRICES BLOCK
+    glGenBuffers(1, &uboMatrixBlock);
+    glBindBuffer(GL_UNIFORM_BUFFER, uboMatrixBlock);
+    glBufferData(GL_UNIFORM_BUFFER,
+                 128,
+                 NULL,
+                 GL_STATIC_DRAW); // 2 * mat4 (64bits)
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    // END SETTING UP MAIN TRANSFORMS
+
+    // COMPILING SHADERS
+    Shader skyboxShader("VertexShaderCubemap.glsl",
+                        "FragmentShaderCubemap.glsl");
+
+    Shader reflectiveExplodedShader("VertexShaderExplodedReflection.glsl",
+                                    //"GeometryShaderExplodedReflection.glsl",
+                                    "FragmentShaderExplodedReflection.glsl");
+
+    string cubePath = "resources/models/textured_cube/cube.obj";
+    //Model modelToDraw = Model(FileSystem::getPath(cubePath));
+
+    string backpackPath = "resources/models/backpack/backpack.obj";
+    Model modelToDraw = Model(FileSystem::getPath(backpackPath));
 
     while (!glfwWindowShouldClose(window))
     {
@@ -155,9 +218,59 @@ main()
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        geometryShader.use();
-        glBindVertexArray(pointsVAO);
-        glDrawArrays(GL_POINTS, 0, 4);
+        view = camera.GetViewMatrix();
+        projection = glm::perspective(glm::radians(camera.Zoom),
+                                      (float)windowWidth / (float)windowHeight,
+                                      0.1f,
+                                      100.0f);
+
+        auto lightDirection = glm::vec3(-0.3f, 0.5f, -1.0f);
+        auto modelPosition = glm::vec3(0.2f, 0.0f, 0.0f);
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, modelPosition);
+
+        reflectiveExplodedShader.use();
+        reflectiveExplodedShader.setMat4("model", model);
+
+        glBindBuffer(GL_UNIFORM_BUFFER, uboMatrixBlock);
+        glBufferSubData(GL_UNIFORM_BUFFER,
+                        0,
+                        sizeof(view),
+                        glm::value_ptr(view));
+        glBufferSubData(GL_UNIFORM_BUFFER,
+                        64,
+                        sizeof(projection),
+                        glm::value_ptr(projection));
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+        reflectiveExplodedShader.setUniformBlock("MatricesBlock",
+                                                 uboMatrixBlock);
+        reflectiveExplodedShader.setVec3("lightDirection", lightDirection);
+
+        if (skyboxTextureId >= 0)
+        {
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTextureId);
+            reflectiveExplodedShader.setInt("skybox", 0);
+            reflectiveExplodedShader.setVec3("viewPos", camera.Position);
+        }
+
+        modelToDraw.Draw(reflectiveExplodedShader);
+
+        // DRAW SKYBOX
+        glDepthFunc(GL_LEQUAL);
+
+        skyboxShader.use();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTextureId);
+        skyboxShader.setInt("skybox", 0);
+        skyboxShader.setMat4("view", glm::mat4(glm::mat3(view)));
+        skyboxShader.setMat4("projection", projection);
+
+        glBindVertexArray(skyboxVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        glDepthFunc(GL_LESS);
 
         updateWindowNameWithFPS(window, title);
 
@@ -165,9 +278,6 @@ main()
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
-
-    glDeleteVertexArrays(1, &pointsVAO);
-    glDeleteBuffers(1, &pointsVBO);
 
     glfwTerminate();
     return 0;
