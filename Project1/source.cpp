@@ -195,7 +195,7 @@ main()
                         "FragmentShaderCubemap.glsl");
 
     Shader reflectiveExplodedShader("VertexShaderExplodedReflection.glsl",
-                                    //"GeometryShaderExplodedReflection.glsl",
+                                    "GeometryShaderExplodedReflection.glsl",
                                     "FragmentShaderExplodedReflection.glsl");
 
     string cubePath = "resources/models/textured_cube/cube.obj";
@@ -246,6 +246,7 @@ main()
         reflectiveExplodedShader.setUniformBlock("MatricesBlock",
                                                  uboMatrixBlock);
         reflectiveExplodedShader.setVec3("lightDirection", lightDirection);
+        reflectiveExplodedShader.setFloat("time", elapsedTime);
 
         if (skyboxTextureId >= 0)
         {
@@ -255,7 +256,9 @@ main()
             reflectiveExplodedShader.setVec3("viewPos", camera.Position);
         }
 
+        glDisable(GL_CULL_FACE);
         modelToDraw.Draw(reflectiveExplodedShader);
+        glEnable(GL_CULL_FACE);
 
         // DRAW SKYBOX
         glDepthFunc(GL_LEQUAL);

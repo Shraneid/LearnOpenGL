@@ -2,9 +2,9 @@
 
 out vec4 FragColor;
 
-in VS_OUT {
+in GS_OUT {
 	vec3 Normal;
-	vec3 FragPos;
+	vec3 WorldPos;
 	vec2 TexCoords;
 } fs_in;
 
@@ -24,7 +24,7 @@ uniform vec3 lightDirection;
 void main()
 {
 	vec3 normal = normalize(fs_in.Normal);
-	vec3 fragPosToViewDir = normalize(viewPos - fs_in.FragPos);
+	vec3 fragPosToViewDir = normalize(viewPos - fs_in.WorldPos);
 	vec3 fragPosToLightDir = normalize(-lightDirection);
 
 	float diff = max(dot(normal, fragPosToLightDir), 0.0);
@@ -32,7 +32,7 @@ void main()
 	vec3 reflectedViewDir = reflect(-fragPosToViewDir, normal);
 
 	vec3 reflectedLightDir = reflect(-fragPosToLightDir, normal);
-	float spec = pow(max(dot(fragPosToViewDir, reflectedLightDir), 0.0f), 200.0f);
+	float spec = pow(max(dot(fragPosToViewDir, reflectedLightDir), 0.0f), 100.0f);
 
 	if (diff < 0.001)
 		spec = 0;
