@@ -148,6 +148,12 @@
     <FxCompile Include="VertexShaderDrawnNormals.glsl">
       <Filter>VertexShaders</Filter>
     </FxCompile>
+    <FxCompile Include="FragmentShaderInstancing.glsl">
+      <Filter>FragmentShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="VertexShaderInstancing.glsl">
+      <Filter>VertexShaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />

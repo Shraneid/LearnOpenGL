@@ -208,6 +208,11 @@ class Shader
         auto location = glGetUniformLocation(ID, name.c_str());
         glUniform1f(location, value);
     }
+    void setVec2(const string& name, glm::vec2 value) const
+    {
+        auto location = glGetUniformLocation(ID, name.c_str());
+        glUniform2fv(location, 1, glm::value_ptr(value));
+    }
     void setVec3(const string& name, glm::vec3 value) const
     {
         auto location = glGetUniformLocation(ID, name.c_str());

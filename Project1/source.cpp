@@ -23,13 +23,6 @@ void
 scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 unsigned int
 loadCubemap(vector<string> texture_faces);
-void
-drawScene(unsigned int framebuffer,
-          vector<glm::vec3> positions,
-          Model modelToDraw,
-          Shader modelShader,
-          Shader skyboxShader,
-          int environmentMappingTexture = -1);
 
 int windowWidth = 1920, windowHeight = 1080;
 
@@ -106,25 +99,78 @@ main()
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
     // END SETTING UP MAIN TRANSFORMS
 
+    // QUAD DATA
+    // clang-format off
+    float quadVertices[] = {
+        // position     // colors
+        -0.05f,  0.05f, 1.0f, 0.0f, 0.0f,
+         0.05f, -0.05f, 0.0f, 1.0f, 0.0f,
+        -0.05f, -0.05f, 0.0f, 0.0f, 1.0f,
+
+        -0.05f,  0.05f, 1.0f, 0.0f, 0.0f,
+         0.05f,  0.05f, 1.0f, 1.0f, 0.0f,
+         0.05f, -0.05f, 0.0f, 1.0f, 0.0f,
+    };
+    // clang-format
+
+    unsigned int  quadVAO, quadVBO;
+
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+
+    glBindVertexArray(quadVAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER,
+                 sizeof(quadVertices),
+                 quadVertices,
+                 GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0,
+                          2,
+                          GL_FLOAT,
+                          GL_FALSE,
+                          5 * sizeof(GL_FLOAT),
+                          (void*)0);
+
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1,
+                          3,
+                          GL_FLOAT,
+                          GL_FALSE,
+                          5 * sizeof(GL_FLOAT),
+                          (void*)(2 * sizeof(float)));
+
+
     // COMPILING SHADERS
     Shader skyboxShader("VertexShaderCubemap.glsl",
                         "FragmentShaderCubemap.glsl");
     Skybox skybox("resources/cubemaps/yokohama", skyboxShader);
 
-    Shader reflectiveExplodedShader("VertexShaderExplodedReflection.glsl",
-                                    "GeometryShaderExplodedReflection.glsl",
-                                    "FragmentShaderExplodedReflection.glsl");
-
-    Shader drawnNormalsShader("VertexShaderDrawnNormals.glsl",
-                              "GeometryShaderDrawnNormals.glsl",
-                              "FragmentShaderDrawnNormals.glsl");
+    Shader instancedShader("VertexShaderInstancing.glsl", "FragmentShaderInstancing.glsl");
 
 
     string cubePath = "resources/models/textured_cube/cube.obj";
     string backpackPath = "resources/models/backpack/backpack.obj";
 
-     Model modelToDraw = Model(FileSystem::getPath(cubePath));
+    Model modelToDraw = Model(FileSystem::getPath(cubePath));
     //Model modelToDraw = Model(FileSystem::getPath(backpackPath));
+
+    glm::vec2 translations[100];
+    int index = 0;
+
+    for (int y = -10; y < 10; y += 2) {
+        for (int x = -10; x < 10; x += 2) {
+            glm::vec2 translation;
+            translation.x = (float)x / 10.0f + 0.1f;
+            translation.y = (float)y / 10.0f + 0.1f;
+            
+            translations[index] = translation;
+            index++;
+        } 
+    }
+
 
     while (!glfwWindowShouldClose(window))
     {
@@ -140,69 +186,21 @@ main()
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        view = camera.GetViewMatrix();
-        projection = glm::perspective(glm::radians(camera.Zoom),
-                                      (float)windowWidth / (float)windowHeight,
-                                      0.1f,
-                                      100.0f);
+        //view = camera.GetViewMatrix();
+        //projection = glm::perspective(glm::radians(camera.Zoom),
+        //                              (float)windowWidth / (float)windowHeight,
+        //                              0.1f,
+        //                              100.0f);
 
-        auto lightDirection = glm::vec3(-0.3f, 0.5f, -1.0f);
-        auto modelPosition = glm::vec3(0.2f, 0.0f, 0.0f);
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, modelPosition);
+        instancedShader.use();
 
-        reflectiveExplodedShader.use();
-        reflectiveExplodedShader.setMat4("model", model);
-
-        glBindBuffer(GL_UNIFORM_BUFFER, uboMatrixBlock);
-        glBufferSubData(GL_UNIFORM_BUFFER,
-                        0,
-                        sizeof(view),
-                        glm::value_ptr(view));
-        glBufferSubData(GL_UNIFORM_BUFFER,
-                        64,
-                        sizeof(projection),
-                        glm::value_ptr(projection));
-        glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-        reflectiveExplodedShader.setUniformBlock("MatricesBlock",
-                                                 uboMatrixBlock);
-        reflectiveExplodedShader.setVec3("lightDirection", lightDirection);
-        reflectiveExplodedShader.setFloat("time", elapsedTime);
-
-        if (skybox.textureId >= 0)
-        {
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_CUBE_MAP, skybox.textureId);
-            reflectiveExplodedShader.setInt("skybox", 0);
-            reflectiveExplodedShader.setVec3("viewPos", camera.Position);
+        for (int i = 0; i < std::size(translations); i++) {
+            instancedShader.setVec2("offsets["+std::to_string(i)+"]", translations[i]);
         }
 
-        glDisable(GL_CULL_FACE);
-        modelToDraw.Draw(reflectiveExplodedShader);
-        glEnable(GL_CULL_FACE);
+        glBindVertexArray(quadVAO);
+        glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 100);
 
-        // DRAW NORMALS
-        drawnNormalsShader.use();
-        drawnNormalsShader.setMat4("model", model);
-        glBindBuffer(GL_UNIFORM_BUFFER, uboMatrixBlock);
-        glBufferSubData(GL_UNIFORM_BUFFER,
-                        0,
-                        sizeof(view),
-                        glm::value_ptr(view));
-        glBufferSubData(GL_UNIFORM_BUFFER,
-                        64,
-                        sizeof(projection),
-                        glm::value_ptr(projection));
-        glBindBuffer(GL_UNIFORM_BUFFER, 0);
-        drawnNormalsShader.setUniformBlock("MatricesBlock",
-                                                 uboMatrixBlock);
-
-        modelToDraw.Draw(drawnNormalsShader);
-        // END DRAW NORMALS
-
-
-        skybox.Draw(projection, view);
 
         updateWindowNameWithFPS(window, title);
 
