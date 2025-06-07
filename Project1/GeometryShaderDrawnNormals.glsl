@@ -13,13 +13,13 @@ layout (std140) uniform MatricesBlock
 };
 uniform mat4 model;
 
-void GenerateLine(int idx){
-	vec3 normal = mat3(transpose(inverse(model))) * Normal[idx];
-
-	gl_Position = projection * view * model * gl_in[idx].gl_Position;
+void GenerateLine(int index){
+	gl_Position = projection * gl_in[index].gl_Position;
 	EmitVertex();
 	
-	gl_Position = gl_Position + vec4(normalize(normal) * 0.2, 0);
+	vec3 normalVec = Normal[index];
+	normalVec *= 0.2;
+	gl_Position = projection * (gl_in[index].gl_Position + vec4(normalVec, 0));
 	EmitVertex();
 
 	EndPrimitive();

@@ -203,10 +203,10 @@ main()
                               "FragmentShaderDrawnNormals.glsl");
 
     string cubePath = "resources/models/textured_cube/cube.obj";
-    // Model modelToDraw = Model(FileSystem::getPath(cubePath));
+     Model modelToDraw = Model(FileSystem::getPath(cubePath));
 
     string backpackPath = "resources/models/backpack/backpack.obj";
-    Model modelToDraw = Model(FileSystem::getPath(backpackPath));
+    //Model modelToDraw = Model(FileSystem::getPath(backpackPath));
 
     while (!glfwWindowShouldClose(window))
     {
