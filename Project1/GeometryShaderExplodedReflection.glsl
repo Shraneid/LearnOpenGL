@@ -31,7 +31,7 @@ vec3 CalculateNormal(){
 
 
 vec4 CalculateExplodePosition(vec4 position, vec3 normal){
-	float force = 0;
+	float force = 2;
 	vec4 displacement = vec4(normal * (sin(time)+1)/2 * force, 0);
 
 	return position + displacement;

@@ -9,6 +9,7 @@
 #include "filesystem.h"
 #include "stb_image.h"
 #include "Light.h"
+#include "Skybox.h"
 
 void
 processInput(GLFWwindow* window);
@@ -48,10 +49,6 @@ int nbFrames = 0;
 
 // transformation matrices
 glm::mat4 model, view, projection;
-
-// skybox setup
-unsigned int skyboxVBO, skyboxVAO;
-int skyboxTextureId;
 
 // uniform matrices setup
 unsigned int uboMatrixBlock;
@@ -99,100 +96,20 @@ main()
     glBlendEquation(GL_FUNC_ADD);
 
     // START OF CODE
-
-    // SKYBOX
-    // clang-format off
-    float skyboxVertices[] = {
-        // positions
-        -1.0f, 1.0f,  -1.0f,
-        -1.0f, -1.0f, -1.0f,
-        1.0f,  -1.0f, -1.0f,
-        1.0f,  -1.0f, -1.0f,
-        1.0f,  1.0f,  -1.0f,
-        -1.0f, 1.0f,  -1.0f,
-
-        -1.0f, -1.0f, 1.0f,
-        -1.0f, -1.0f, -1.0f,
-        -1.0f, 1.0f,  -1.0f,
-        -1.0f, 1.0f,  -1.0f,
-        -1.0f, 1.0f,  1.0f,
-        -1.0f, -1.0f, 1.0f,
-
-        1.0f,  -1.0f, -1.0f,
-        1.0f,  -1.0f, 1.0f,
-        1.0f,  1.0f,  1.0f,
-        1.0f,  1.0f,  1.0f,
-        1.0f,  1.0f,  -1.0f,
-        1.0f,  -1.0f, -1.0f,
-
-        -1.0f, -1.0f, 1.0f,
-        -1.0f, 1.0f,  1.0f,
-        1.0f,  1.0f,  1.0f,
-
-        1.0f,  1.0f,  1.0f,
-        1.0f,  -1.0f, 1.0f,
-        -1.0f, -1.0f, 1.0f,
-
-        -1.0f, 1.0f,  -1.0f,
-        1.0f,  1.0f,  -1.0f,
-        1.0f,  1.0f,  1.0f,
-        1.0f,  1.0f,  1.0f,
-        -1.0f, 1.0f,  1.0f,
-        -1.0f, 1.0f,  -1.0f,
-
-        -1.0f, -1.0f, -1.0f,
-        -1.0f, -1.0f, 1.0f,
-        1.0f,  -1.0f, -1.0f,
-        1.0f,  -1.0f, -1.0f,
-        -1.0f, -1.0f, 1.0f,
-        1.0f,  -1.0f, 1.0f
-    };
-    // clang-format on
-
-    glGenVertexArrays(1, &skyboxVAO);
-    glGenBuffers(1, &skyboxVBO);
-
-    glBindVertexArray(skyboxVAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
-    glBufferData(GL_ARRAY_BUFFER,
-                 sizeof(skyboxVertices),
-                 skyboxVertices,
-                 GL_STATIC_DRAW);
-
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0,
-                          3,
-                          GL_FLOAT,
-                          GL_FALSE,
-                          3 * sizeof(GL_FLOAT),
-                          (void*)0);
-
-    vector<string> faces_filepath = {
-        "resources/cubemaps/yokohama/posx.jpg",
-        "resources/cubemaps/yokohama/negx.jpg",
-        "resources/cubemaps/yokohama/posy.jpg",
-        "resources/cubemaps/yokohama/negy.jpg",
-        "resources/cubemaps/yokohama/posz.jpg",
-        "resources/cubemaps/yokohama/negz.jpg",
-    };
-
-    skyboxTextureId = loadCubemap(faces_filepath);
-    // END SKYBOX
-
     // SETTING UP MAIN TRANSFORM MATRICES BLOCK
     glGenBuffers(1, &uboMatrixBlock);
     glBindBuffer(GL_UNIFORM_BUFFER, uboMatrixBlock);
     glBufferData(GL_UNIFORM_BUFFER,
                  128,
                  NULL,
-                 GL_STATIC_DRAW); // 2 * mat4 (64bits)
+                 GL_STATIC_DRAW); // 2 * mat4 (64bytes)
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
     // END SETTING UP MAIN TRANSFORMS
 
     // COMPILING SHADERS
     Shader skyboxShader("VertexShaderCubemap.glsl",
                         "FragmentShaderCubemap.glsl");
+    Skybox skybox("resources/cubemaps/yokohama", skyboxShader);
 
     Shader reflectiveExplodedShader("VertexShaderExplodedReflection.glsl",
                                     "GeometryShaderExplodedReflection.glsl",
@@ -202,10 +119,11 @@ main()
                               "GeometryShaderDrawnNormals.glsl",
                               "FragmentShaderDrawnNormals.glsl");
 
-    string cubePath = "resources/models/textured_cube/cube.obj";
-     Model modelToDraw = Model(FileSystem::getPath(cubePath));
 
+    string cubePath = "resources/models/textured_cube/cube.obj";
     string backpackPath = "resources/models/backpack/backpack.obj";
+
+     Model modelToDraw = Model(FileSystem::getPath(cubePath));
     //Model modelToDraw = Model(FileSystem::getPath(backpackPath));
 
     while (!glfwWindowShouldClose(window))
@@ -252,10 +170,10 @@ main()
         reflectiveExplodedShader.setVec3("lightDirection", lightDirection);
         reflectiveExplodedShader.setFloat("time", elapsedTime);
 
-        if (skyboxTextureId >= 0)
+        if (skybox.textureId >= 0)
         {
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTextureId);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, skybox.textureId);
             reflectiveExplodedShader.setInt("skybox", 0);
             reflectiveExplodedShader.setVec3("viewPos", camera.Position);
         }
@@ -283,20 +201,8 @@ main()
         modelToDraw.Draw(drawnNormalsShader);
         // END DRAW NORMALS
 
-        // DRAW SKYBOX
-        glDepthFunc(GL_LEQUAL);
 
-        skyboxShader.use();
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTextureId);
-        skyboxShader.setInt("skybox", 0);
-        skyboxShader.setMat4("view", glm::mat4(glm::mat3(view)));
-        skyboxShader.setMat4("projection", projection);
-
-        glBindVertexArray(skyboxVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-
-        glDepthFunc(GL_LESS);
+        skybox.Draw(projection, view);
 
         updateWindowNameWithFPS(window, title);
 
@@ -441,4 +347,6 @@ loadCubemap(vector<string> faces_filepath)
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
     stbi_set_flip_vertically_on_load(true);
+
+    return cubemapTextureID;
 }
