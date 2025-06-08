@@ -99,78 +99,74 @@ main()
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
     // END SETTING UP MAIN TRANSFORMS
 
-    // QUAD DATA
-    // clang-format off
-    float quadVertices[] = {
-        // position     // colors
-        -0.05f,  0.05f, 1.0f, 0.0f, 0.0f,
-         0.05f, -0.05f, 0.0f, 1.0f, 0.0f,
-        -0.05f, -0.05f, 0.0f, 0.0f, 1.0f,
-
-        -0.05f,  0.05f, 1.0f, 0.0f, 0.0f,
-         0.05f,  0.05f, 1.0f, 1.0f, 0.0f,
-         0.05f, -0.05f, 0.0f, 1.0f, 0.0f,
-    };
-    // clang-format
-
-    unsigned int  quadVAO, quadVBO;
-
-    glGenVertexArrays(1, &quadVAO);
-    glGenBuffers(1, &quadVBO);
-
-    glBindVertexArray(quadVAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-    glBufferData(GL_ARRAY_BUFFER,
-                 sizeof(quadVertices),
-                 quadVertices,
-                 GL_STATIC_DRAW);
-
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0,
-                          2,
-                          GL_FLOAT,
-                          GL_FALSE,
-                          5 * sizeof(GL_FLOAT),
-                          (void*)0);
-
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1,
-                          3,
-                          GL_FLOAT,
-                          GL_FALSE,
-                          5 * sizeof(GL_FLOAT),
-                          (void*)(2 * sizeof(float)));
-
-
     // COMPILING SHADERS
     Shader skyboxShader("VertexShaderCubemap.glsl",
                         "FragmentShaderCubemap.glsl");
-    Skybox skybox("resources/cubemaps/yokohama", skyboxShader);
+    Skybox skybox("resources/cubemaps/space", skyboxShader);
 
-    Shader instancedShader("VertexShaderInstancing.glsl", "FragmentShaderInstancing.glsl");
+    Shader marsShader("VertexShaderModelBase.glsl",
+                      "FragmentShaderInstancingAsteroids.glsl");
 
+    Shader instancingRockShader("VertexShaderInstancingAsteroids.glsl",
+                                "FragmentShaderInstancingAsteroids.glsl");
 
-    string cubePath = "resources/models/textured_cube/cube.obj";
-    string backpackPath = "resources/models/backpack/backpack.obj";
+    // string modelPath = "resources/models/textured_cube/cube.obj";
+    // string modelPath = "resources/models/backpack/backpack.obj";
+    string marsPath = "resources/models/planet/planet.obj";
+    string rockPath = "resources/models/rock/rock.obj";
 
-    Model modelToDraw = Model(FileSystem::getPath(cubePath));
-    //Model modelToDraw = Model(FileSystem::getPath(backpackPath));
+    Model mars = Model(FileSystem::getPath(marsPath));
+    Model rock = Model(FileSystem::getPath(rockPath));
 
-    glm::vec2 translations[100];
-    int index = 0;
+    auto planetPosition = glm::vec3(-70.0f, -10.0f, 10.0f);
 
-    for (int y = -10; y < 10; y += 2) {
-        for (int x = -10; x < 10; x += 2) {
-            glm::vec2 translation;
-            translation.x = (float)x / 10.0f + 0.1f;
-            translation.y = (float)y / 10.0f + 0.1f;
-            
-            translations[index] = translation;
-            index++;
-        } 
+    int amount = 10000;
+    vector<glm::vec3> rotationVectors;
+    vector<float> rotationSpeed;
+    vector<glm::mat4> baseModelMatrices;
+    vector<glm::mat4> currentModelMatrices;
+    srand(glfwGetTime());
+    float radius = 50.0;
+    float offset = 10.f;
+
+    for (unsigned int i = 0; i < amount; i++)
+    {
+        glm::mat4 model = glm::mat4(1.0f);
+
+        float angle = (float)i / (float)amount * 360.0f;
+        float displacement =
+          (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+        float x = sin(angle) * radius + displacement;
+        displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+        float y = displacement * 0.4;
+        displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+        float z = cos(angle) * radius + displacement;
+        model = glm::translate(model, glm::vec3(x, y, z) + planetPosition);
+
+        float scale = (rand() % 20) / 100.0f + 0.05;
+        model = glm::scale(model, glm::vec3(scale));
+
+        float rotationAngle = (rand() % 360);
+        model = glm::rotate(model, rotationAngle, glm::vec3(0.4f, 0.6f, 0.8f));
+
+        baseModelMatrices.push_back(model);
+        currentModelMatrices.push_back(model);
+
+        glm::vec3 randomRotationAxis = glm::vec3((rand() % 100) / 100.0f,
+                                                 (rand() % 100) / 100.0f,
+                                                 (rand() % 100) / 100.0f);
+        rotationVectors.push_back(randomRotationAxis);
+
+        float speed = (rand() % 5) / 100.0f + 0.01f;
+        rotationSpeed.push_back(speed);
     }
 
+    std::size_t vec4Size = sizeof(glm::vec4);
+    unsigned int VAO;
+
+    // asteroid modelBuffer
+    unsigned int buffer;
+    glGenBuffers(1, &buffer);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -186,21 +182,98 @@ main()
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        //view = camera.GetViewMatrix();
-        //projection = glm::perspective(glm::radians(camera.Zoom),
-        //                              (float)windowWidth / (float)windowHeight,
-        //                              0.1f,
-        //                              100.0f);
+        view = camera.GetViewMatrix();
+        projection = glm::perspective(glm::radians(camera.Zoom),
+                                      (float)windowWidth / (float)windowHeight,
+                                      0.1f,
+                                      1000.0f);
 
-        instancedShader.use();
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, planetPosition);
+        model = glm::rotate(model,
+                            (float)(-elapsedTime / 100.0),
+                            glm::vec3(0.0f, 1.0f, 0.0f));
+        model = glm::scale(model, glm::vec3(4.0f));
 
-        for (int i = 0; i < std::size(translations); i++) {
-            instancedShader.setVec2("offsets["+std::to_string(i)+"]", translations[i]);
+        marsShader.use();
+        marsShader.setMat4("model", model);
+        marsShader.setMat4("view", view);
+        marsShader.setMat4("projection", projection);
+        marsShader.setVec3("viewPos", camera.Position);
+
+        mars.Draw(marsShader);
+
+        // Modifying all asteroids transforms
+        for (auto i = 0; i < baseModelMatrices.size(); i++)
+        {
+            currentModelMatrices[i] = glm::rotate(baseModelMatrices[i],
+                                                  rotationSpeed[i] * elapsedTime * 5,
+                                                  rotationVectors[i]);
         }
 
-        glBindVertexArray(quadVAO);
-        glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 100);
+        glBindBuffer(GL_ARRAY_BUFFER, buffer);
+        glBufferData(GL_ARRAY_BUFFER,
+                     amount * sizeof(glm::mat4),
+                     currentModelMatrices.data(),
+                     GL_STATIC_DRAW);
 
+        for (unsigned int i = 0; i < rock.meshes.size(); i++)
+        {
+            VAO = rock.meshes[i].VAO;
+            glBindVertexArray(VAO);
+
+            glEnableVertexAttribArray(3);
+            glVertexAttribPointer(3,
+                                  4,
+                                  GL_FLOAT,
+                                  GL_FALSE,
+                                  4 * vec4Size,
+                                  (void*)(0 * vec4Size));
+            glEnableVertexAttribArray(4);
+            glVertexAttribPointer(4,
+                                  4,
+                                  GL_FLOAT,
+                                  GL_FALSE,
+                                  4 * vec4Size,
+                                  (void*)(1 * vec4Size));
+            glEnableVertexAttribArray(5);
+            glVertexAttribPointer(5,
+                                  4,
+                                  GL_FLOAT,
+                                  GL_FALSE,
+                                  4 * vec4Size,
+                                  (void*)(2 * vec4Size));
+            glEnableVertexAttribArray(6);
+            glVertexAttribPointer(6,
+                                  4,
+                                  GL_FLOAT,
+                                  GL_FALSE,
+                                  4 * vec4Size,
+                                  (void*)(3 * vec4Size));
+
+            glVertexAttribDivisor(3, 1);
+            glVertexAttribDivisor(4, 1);
+            glVertexAttribDivisor(5, 1);
+            glVertexAttribDivisor(6, 1);
+        }
+        // END
+
+        instancingRockShader.use();
+        instancingRockShader.setMat4("view", view);
+        instancingRockShader.setMat4("projection", projection);
+        instancingRockShader.setVec3("viewPos", camera.Position);
+
+        for (unsigned int i = 0; i < rock.meshes.size(); i++)
+        {
+            glBindVertexArray(rock.meshes[i].VAO);
+            glDrawElementsInstanced(GL_TRIANGLES,
+                                    rock.meshes[i].indices.size(),
+                                    GL_UNSIGNED_INT,
+                                    0,
+                                    amount);
+        }
+
+         skybox.Draw(projection, view);
 
         updateWindowNameWithFPS(window, title);
 

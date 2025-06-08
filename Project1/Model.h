@@ -11,6 +11,7 @@
 class Model
 {
   public:
+    vector<Mesh> meshes;
     Model(string path) { loadModel(path); }
     void Draw(Shader& shader)
     {
@@ -21,7 +22,6 @@ class Model
     }
 
   private:
-    vector<Mesh> meshes;
     string directory;
     vector<Texture> loaded_textures;
 

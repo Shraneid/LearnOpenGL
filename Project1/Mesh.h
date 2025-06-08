@@ -19,6 +19,8 @@ struct Texture
 class Mesh
 {
   public:
+    unsigned int VAO, VBO, EBO;
+
     vector<Vertex> vertices;
     vector<unsigned int> indices;
     vector<Texture> textures;
@@ -58,8 +60,6 @@ class Mesh
     }
 
   private:
-    unsigned int VAO, VBO, EBO;
-
     void setupMesh()
     {
         glGenVertexArrays(1, &VAO);
