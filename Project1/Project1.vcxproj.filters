@@ -154,6 +154,12 @@
     <FxCompile Include="VertexShaderInstancing.glsl">
       <Filter>VertexShaders</Filter>
     </FxCompile>
+    <FxCompile Include="FragmentShaderInstancingAsteroids.glsl">
+      <Filter>FragmentShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="VertexShaderInstancingAsteroids.glsl">
+      <Filter>VertexShaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />

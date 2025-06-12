@@ -30,6 +30,6 @@ void main()
 	vec3 ambient = 0.05 * vec3(texture(material.texture_diffuse1, TexCoords));
 	vec3 diffuse = 0.95 * diff * vec3(texture(material.texture_diffuse1, TexCoords));
 
-//	FragColor = vec4(ambient + diffuse, 1);
-	FragColor = vec4(Normal, 1);
+	FragColor = vec4(ambient + diffuse, 1);
+//	FragColor = vec4(Normal, 1);
 };

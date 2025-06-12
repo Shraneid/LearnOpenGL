@@ -118,6 +118,8 @@ main()
     Model mars = Model(FileSystem::getPath(marsPath));
     Model rock = Model(FileSystem::getPath(rockPath));
 
+    glEnable(GL_FRAMEBUFFER_SRGB);
+
     auto planetPosition = glm::vec3(-70.0f, -10.0f, 10.0f);
 
     int amount = 10000;
