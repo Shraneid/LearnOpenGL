@@ -12,8 +12,6 @@ class Light
     virtual void setUniforms(Shader& shader) const = 0;
 
   protected:
-    Light() = default;
-
     static int directionalLightsCounter;
     static int pointLightsCounter;
     static int spotLightsCounter;
@@ -29,6 +27,8 @@ int Light::spotLightsCounter = 0;
 class DirectionalLight : public Light
 {
   public:
+    glm::vec3 direction;
+
     DirectionalLight(glm::vec3 dir,
                      glm::vec3 amb,
                      glm::vec3 diff,
@@ -59,8 +59,6 @@ class DirectionalLight : public Light
 
   private:
     void setId() { id = directionalLightsCounter++; }
-
-    glm::vec3 direction;
 
     glm::vec3 ambient;
     glm::vec3 diffuse;

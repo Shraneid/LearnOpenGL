@@ -10,6 +10,7 @@
 #include "stb_image.h"
 #include "Light.h"
 #include "Skybox.h"
+#include "Cube.h"
 
 void
 processInput(GLFWwindow* window);
@@ -26,7 +27,7 @@ loadCubemap(vector<string> texture_faces);
 
 int windowWidth = 1920, windowHeight = 1080;
 
-Camera camera = Camera(glm::vec3(0.0f, 0.0f, 5.0f));
+Camera camera = Camera(glm::vec3(0.0f, 1.0f, 5.0f));
 int lastX, lastY;
 
 // physics
@@ -88,6 +89,9 @@ main()
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glBlendEquation(GL_FUNC_ADD);
 
+    // gamma correction setup
+    glEnable(GL_FRAMEBUFFER_SRGB);
+
     // START OF CODE
     // SETTING UP MAIN TRANSFORM MATRICES BLOCK
     glGenBuffers(1, &uboMatrixBlock);
@@ -104,71 +108,146 @@ main()
                         "FragmentShaderCubemap.glsl");
     Skybox skybox("resources/cubemaps/space", skyboxShader);
 
-    Shader marsShader("VertexShaderModelBase.glsl",
-                      "FragmentShaderInstancingAsteroids.glsl");
+    Shader fullscreenQuadShader("VertexShaderRenderbuffer.glsl",
+                                "FragmentShaderRenderbuffer.glsl");
+    Shader depthPassThroughShader("VertexShaderDepthPassThrough.glsl",
+                                  "FragmentShaderDepthPassThrough.glsl");
+    Shader cubeLitWithShadowsShader("VertexShaderModelLitShadows.glsl",
+                                    "FragmentShaderModelLitShadows.glsl");
 
-    Shader instancingRockShader("VertexShaderInstancingAsteroids.glsl",
-                                "FragmentShaderInstancingAsteroids.glsl");
-
-    // string modelPath = "resources/models/textured_cube/cube.obj";
-    // string modelPath = "resources/models/backpack/backpack.obj";
+    string cubePath = "resources/models/textured_cube/cube.obj";
     string marsPath = "resources/models/planet/planet.obj";
     string rockPath = "resources/models/rock/rock.obj";
 
-    Model mars = Model(FileSystem::getPath(marsPath));
-    Model rock = Model(FileSystem::getPath(rockPath));
+    Model cube = Model(FileSystem::getPath(cubePath));
+    // Model mars = Model(FileSystem::getPath(marsPath));
+    // Model rock = Model(FileSystem::getPath(rockPath));
 
-    glEnable(GL_FRAMEBUFFER_SRGB);
+    float floorSize = 10.0f;
+    vector<vector<glm::vec3>> posScaleRot = {
+        { glm::vec3(0, -floorSize, 0),
+          glm::vec3(floorSize),
+          glm::vec3(1),
+          glm::vec3(0) },
 
-    auto planetPosition = glm::vec3(-70.0f, -10.0f, 10.0f);
+        { glm::vec3(0.0f, 1.5f, 0.0),  // pos
+          glm::vec3(0.5),              // scale
+          glm::vec3(1, 1, -1),         // rotation axis
+          glm::vec3(0) },              // rotation angle
+        { glm::vec3(2.0f, 0.5f, 1.0),  // pos
+          glm::vec3(0.5),              // scale
+          glm::vec3(1, 0.3, -0.2),     // rotation axis
+          glm::vec3(0) },              // rotation angle
+        { glm::vec3(-1.0f, 1.0f, 2.0), // pos
+          glm::vec3(0.25),             // scale
+          glm::vec3(1.0, 0.0, 1.0),    // rotation axis
+          glm::vec3(60) },             // rotation angle
+    };
 
-    int amount = 10000;
-    vector<glm::vec3> rotationVectors;
-    vector<float> rotationSpeed;
-    vector<glm::mat4> baseModelMatrices;
-    vector<glm::mat4> currentModelMatrices;
-    srand(glfwGetTime());
-    float radius = 50.0;
-    float offset = 10.f;
+    auto d1 = std::make_shared<DirectionalLight>(
+      glm::vec3(2.0f, -4.0f, 1.0f), // direction
+      glm::vec3(0.15f),             // ambient
+      glm::vec3(0.35f),             // diffuse
+      glm::vec3(0.5f)               // specular
+    );
 
-    for (unsigned int i = 0; i < amount; i++)
-    {
-        glm::mat4 model = glm::mat4(1.0f);
+    // auto d1 = std::make_shared<DirectionalLight>(
+    //   glm::vec3(0.5f, -1.0f, -1.2f), // direction
+    //   glm::vec3(0.05f),              // ambient
+    //   glm::vec3(0.4f),               // diffuse
+    //   glm::vec3(0.5f)                // specular
+    //);
 
-        float angle = (float)i / (float)amount * 360.0f;
-        float displacement =
-          (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
-        float x = sin(angle) * radius + displacement;
-        displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
-        float y = displacement * 0.4;
-        displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
-        float z = cos(angle) * radius + displacement;
-        model = glm::translate(model, glm::vec3(x, y, z) + planetPosition);
+    // auto p1 =
+    //   std::make_shared<PointLight>(&greenLightCubeObject.Position, //
+    //   position
+    //                                glm::vec3(0.05f),               // ambient
+    //                                glm::vec3(0.0f, 1.0f, 0.0f),    // diffuse
+    //                                glm::vec3(0.5f),                //
+    //                                specular 1.0f, // constant 0.045f, //
+    //                                linear 0.0075f                         //
+    //                                quadratic
+    //   );
 
-        float scale = (rand() % 20) / 100.0f + 0.05;
-        model = glm::scale(model, glm::vec3(scale));
+    vector<std::shared_ptr<Light>> lights;
+    lights.push_back(d1);
+    // lights.push_back(p1);
 
-        float rotationAngle = (rand() % 360);
-        model = glm::rotate(model, rotationAngle, glm::vec3(0.4f, 0.6f, 0.8f));
+    // SHADOW MAP SETUP
+    unsigned int shadowMapFBO;
+    glGenFramebuffers(1, &shadowMapFBO);
 
-        baseModelMatrices.push_back(model);
-        currentModelMatrices.push_back(model);
+    const unsigned int SHADOW_WIDTH = 4096, SHADOW_HEIGHT = 4096;
 
-        glm::vec3 randomRotationAxis = glm::vec3((rand() % 100) / 100.0f,
-                                                 (rand() % 100) / 100.0f,
-                                                 (rand() % 100) / 100.0f);
-        rotationVectors.push_back(randomRotationAxis);
+    unsigned int depthMapTextureID;
+    glGenTextures(1, &depthMapTextureID);
+    glBindTexture(GL_TEXTURE_2D, depthMapTextureID);
+    glTexImage2D(GL_TEXTURE_2D,
+                 0,
+                 GL_DEPTH_COMPONENT,
+                 SHADOW_WIDTH,
+                 SHADOW_HEIGHT,
+                 0,
+                 GL_DEPTH_COMPONENT,
+                 GL_FLOAT,
+                 NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 
-        float speed = (rand() % 5) / 100.0f + 0.01f;
-        rotationSpeed.push_back(speed);
-    }
+    float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
-    std::size_t vec4Size = sizeof(glm::vec4);
-    unsigned int VAO;
+    glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER,
+                           GL_DEPTH_ATTACHMENT,
+                           GL_TEXTURE_2D,
+                           depthMapTextureID,
+                           0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    // asteroid modelBuffer
-    unsigned int buffer;
-    glGenBuffers(1, &buffer);
+    // TEMP DEPTH MAP RENDERING
+    // clang-format off
+    float vertices[] = {
+        // positions  // texCoords
+        -1.0f, +1.0f, 0.0f,  1.0f,  
+        -1.0f, -1.0f, 0.0f,  0.0f,  
+        +1.0f, -1.0f, 1.0f,  0.0f,
+
+        -1.0f, +1.0f, 0.0f,  1.0f,
+        +1.0f, -1.0f, 1.0f,  0.0f,  
+        +1.0f, +1.0f, 1.0f,  1.0f,
+    };
+    // clang-format on
+
+    unsigned int quadVBO, quadVAO;
+
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+
+    glBindVertexArray(quadVAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0,
+                          2,
+                          GL_FLOAT,
+                          GL_FALSE,
+                          4 * sizeof(GL_FLOAT),
+                          (void*)0);
+
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1,
+                          2,
+                          GL_FLOAT,
+                          GL_FALSE,
+                          4 * sizeof(GL_FLOAT),
+                          (void*)(2 * sizeof(float)));
 
     while (!glfwWindowShouldClose(window))
     {
@@ -181,6 +260,67 @@ main()
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
+        dynamic_pointer_cast<DirectionalLight>(lights[0]).get()->direction =
+          glm::vec3(4.0f * sin(elapsedTime), -4.0f, 4.0f * cos(elapsedTime));
+
+        // RENDER SHADOW MAP
+        glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+        glCullFace(GL_FRONT);
+        glEnable(GL_DEPTH_TEST);
+        glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFBO);
+        glClear(GL_DEPTH_BUFFER_BIT);
+
+        float near_plane = 1.0f, far_plane = 15.0f;
+        glm::mat4 lightProjection = glm::ortho(-far_plane,
+                                               far_plane,
+                                               -far_plane,
+                                               far_plane,
+                                               near_plane,
+                                               far_plane);
+
+        auto lightDir =
+          dynamic_pointer_cast<DirectionalLight>(lights[0])->direction;
+        float lightPosMoveAwayForce = 1.5f;
+        glm::vec3 lightPos = -lightDir * lightPosMoveAwayForce;
+
+        glm::mat4 lightView = glm::lookAt(lightPos,
+                                          glm::vec3(0.0f, 0.0f, 0.0f),
+                                          glm::vec3(0.0f, 1.0f, 0.0f));
+
+        glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+
+        depthPassThroughShader.use();
+        depthPassThroughShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+
+        for (auto vectors : posScaleRot)
+        {
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, vectors[0]);
+            model = glm::rotate(model, vectors[3].x, vectors[2]);
+            model = glm::scale(model, vectors[1]);
+
+            depthPassThroughShader.setMat4("model", model);
+
+            cube.Draw(depthPassThroughShader);
+        }
+
+        glViewport(0, 0, windowWidth, windowHeight);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glCullFace(GL_BACK);
+        // SHADOW MAP DONE
+
+        // TEMP
+        // fullscreenQuadShader.use();
+        // fullscreenQuadShader.setInt("screenTexture", 0);
+        // glBindVertexArray(quadVAO);
+        // glDisable(GL_DEPTH_TEST);
+        // glActiveTexture(GL_TEXTURE0);
+        // glBindTexture(GL_TEXTURE_2D, depthMapTextureID);
+        // glDrawArrays(GL_TRIANGLES, 0, 6);
+        // END TEMP
+
+        // RENDER NORMAL SCENE
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -190,92 +330,31 @@ main()
                                       0.1f,
                                       1000.0f);
 
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, planetPosition);
-        model = glm::rotate(model,
-                            (float)(-elapsedTime / 100.0),
-                            glm::vec3(0.0f, 1.0f, 0.0f));
-        model = glm::scale(model, glm::vec3(4.0f));
-
-        marsShader.use();
-        marsShader.setMat4("model", model);
-        marsShader.setMat4("view", view);
-        marsShader.setMat4("projection", projection);
-        marsShader.setVec3("viewPos", camera.Position);
-
-        mars.Draw(marsShader);
-
-        // Modifying all asteroids transforms
-        for (auto i = 0; i < baseModelMatrices.size(); i++)
+        cubeLitWithShadowsShader.use();
+        glActiveTexture(GL_TEXTURE0);
+        cubeLitWithShadowsShader.setInt("shadowMap", 0);
+        cubeLitWithShadowsShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+        for (auto vectors : posScaleRot)
         {
-            currentModelMatrices[i] = glm::rotate(baseModelMatrices[i],
-                                                  rotationSpeed[i] * elapsedTime * 5,
-                                                  rotationVectors[i]);
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, vectors[0]);
+            model = glm::scale(model, vectors[1]);
+            model = glm::rotate(model, vectors[3].x, vectors[2]);
+
+            for (auto light : lights)
+            {
+                light.get()->setUniforms(cubeLitWithShadowsShader);
+            }
+
+            cubeLitWithShadowsShader.setMat4("model", model);
+            cubeLitWithShadowsShader.setMat4("view", view);
+            cubeLitWithShadowsShader.setMat4("projection", projection);
+            cubeLitWithShadowsShader.setVec3("viewPos", camera.Position);
+
+            cube.Draw(cubeLitWithShadowsShader);
         }
 
-        glBindBuffer(GL_ARRAY_BUFFER, buffer);
-        glBufferData(GL_ARRAY_BUFFER,
-                     amount * sizeof(glm::mat4),
-                     currentModelMatrices.data(),
-                     GL_STATIC_DRAW);
-
-        for (unsigned int i = 0; i < rock.meshes.size(); i++)
-        {
-            VAO = rock.meshes[i].VAO;
-            glBindVertexArray(VAO);
-
-            glEnableVertexAttribArray(3);
-            glVertexAttribPointer(3,
-                                  4,
-                                  GL_FLOAT,
-                                  GL_FALSE,
-                                  4 * vec4Size,
-                                  (void*)(0 * vec4Size));
-            glEnableVertexAttribArray(4);
-            glVertexAttribPointer(4,
-                                  4,
-                                  GL_FLOAT,
-                                  GL_FALSE,
-                                  4 * vec4Size,
-                                  (void*)(1 * vec4Size));
-            glEnableVertexAttribArray(5);
-            glVertexAttribPointer(5,
-                                  4,
-                                  GL_FLOAT,
-                                  GL_FALSE,
-                                  4 * vec4Size,
-                                  (void*)(2 * vec4Size));
-            glEnableVertexAttribArray(6);
-            glVertexAttribPointer(6,
-                                  4,
-                                  GL_FLOAT,
-                                  GL_FALSE,
-                                  4 * vec4Size,
-                                  (void*)(3 * vec4Size));
-
-            glVertexAttribDivisor(3, 1);
-            glVertexAttribDivisor(4, 1);
-            glVertexAttribDivisor(5, 1);
-            glVertexAttribDivisor(6, 1);
-        }
-        // END
-
-        instancingRockShader.use();
-        instancingRockShader.setMat4("view", view);
-        instancingRockShader.setMat4("projection", projection);
-        instancingRockShader.setVec3("viewPos", camera.Position);
-
-        for (unsigned int i = 0; i < rock.meshes.size(); i++)
-        {
-            glBindVertexArray(rock.meshes[i].VAO);
-            glDrawElementsInstanced(GL_TRIANGLES,
-                                    rock.meshes[i].indices.size(),
-                                    GL_UNSIGNED_INT,
-                                    0,
-                                    amount);
-        }
-
-         skybox.Draw(projection, view);
+        skybox.Draw(projection, view);
 
         updateWindowNameWithFPS(window, title);
 
@@ -316,7 +395,7 @@ processInput(GLFWwindow* window)
 
     if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS)
     {
-        std::cout << "camera position: (" + std::to_string(camera.Position.x) +
+        std::cout << "camera posScale: (" + std::to_string(camera.Position.x) +
                        ", " + std::to_string(camera.Position.y) + ", " +
                        std::to_string(camera.Position.z) + ")"
                   << std::endl;
