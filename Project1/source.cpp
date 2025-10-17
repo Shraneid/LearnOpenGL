@@ -116,10 +116,12 @@ main()
                                     "FragmentShaderModelLitShadows.glsl");
 
     string cubePath = "resources/models/textured_cube/cube.obj";
+    string backpackPath = "resources/models/backpack/backpack.obj";
     string marsPath = "resources/models/planet/planet.obj";
     string rockPath = "resources/models/rock/rock.obj";
 
     Model cube = Model(FileSystem::getPath(cubePath));
+    Model backpack = Model(FileSystem::getPath(backpackPath));
     // Model mars = Model(FileSystem::getPath(marsPath));
     // Model rock = Model(FileSystem::getPath(rockPath));
 
@@ -292,8 +294,9 @@ main()
         depthPassThroughShader.use();
         depthPassThroughShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
 
-        for (auto vectors : posScaleRot)
+        for (int i = 0; i < posScaleRot.size(); i++)
         {
+            auto vectors = posScaleRot[i];
             model = glm::mat4(1.0f);
             model = glm::translate(model, vectors[0]);
             model = glm::rotate(model, vectors[3].x, vectors[2]);
@@ -301,7 +304,14 @@ main()
 
             depthPassThroughShader.setMat4("model", model);
 
-            cube.Draw(depthPassThroughShader);
+            if (i == 0)
+            {
+                cube.Draw(depthPassThroughShader);
+            }
+            else
+            {
+                backpack.Draw(depthPassThroughShader);
+            }
         }
 
         glViewport(0, 0, windowWidth, windowHeight);
@@ -334,8 +344,10 @@ main()
         glActiveTexture(GL_TEXTURE0);
         cubeLitWithShadowsShader.setInt("shadowMap", 0);
         cubeLitWithShadowsShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
-        for (auto vectors : posScaleRot)
+        for (int i = 0; i < posScaleRot.size(); i++)
         {
+            auto vectors = posScaleRot[i];
+
             model = glm::mat4(1.0f);
             model = glm::translate(model, vectors[0]);
             model = glm::scale(model, vectors[1]);
@@ -351,7 +363,14 @@ main()
             cubeLitWithShadowsShader.setMat4("projection", projection);
             cubeLitWithShadowsShader.setVec3("viewPos", camera.Position);
 
-            cube.Draw(cubeLitWithShadowsShader);
+            if (i == 0)
+            {
+                cube.Draw(cubeLitWithShadowsShader);
+            }
+            else
+            {
+                backpack.Draw(cubeLitWithShadowsShader);
+            }
         }
 
         skybox.Draw(projection, view);
