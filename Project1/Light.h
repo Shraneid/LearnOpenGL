@@ -68,7 +68,7 @@ class DirectionalLight : public Light
 class PointLight : public Light
 {
   public:
-    PointLight(glm::vec3* pos,
+    PointLight(glm::vec3 pos,
                glm::vec3 amb,
                glm::vec3 diff,
                glm::vec3 spec,
@@ -97,7 +97,7 @@ class PointLight : public Light
           "pointLights[" + std::to_string(GetLightId()) + "]";
 
         shader.setVec3(lightGLID + ".ambient", ambient);
-        shader.setVec3(lightGLID + ".position", *position);
+        shader.setVec3(lightGLID + ".position", position);
         shader.setVec3(lightGLID + ".diffuse", diffuse);
         shader.setVec3(lightGLID + ".specular", specular);
         shader.setFloat(lightGLID + ".constant", constant);
@@ -105,13 +105,13 @@ class PointLight : public Light
         shader.setFloat(lightGLID + ".quadratic", quadratic);
     }
 
-    glm::vec3* getPosition() { return position; }
+    glm::vec3 getPosition() { return position; }
     glm::vec3 getDiffuse() { return diffuse; }
+
+    glm::vec3 position;
 
   private:
     void setId() { id = pointLightsCounter++; }
-
-    glm::vec3* position;
 
     glm::vec3 ambient;
     glm::vec3 diffuse;

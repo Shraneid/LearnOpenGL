@@ -166,6 +166,23 @@
     <FxCompile Include="FragmentShaderModelLitShadows.glsl">
       <Filter>FragmentShaders</Filter>
     </FxCompile>
+    <FxCompile Include="FragmentShaderDepthPassThrough.glsl" />
+    <FxCompile Include="VertexShaderDepthPassThrough.glsl" />
+    <FxCompile Include="GeometryShaderOmniShadowMap.glsl">
+      <Filter>GeometryShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="FragmentShaderOmniShadowMap.glsl">
+      <Filter>FragmentShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="VertexShaderOmniShadowMap.glsl">
+      <Filter>VertexShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="FragmentShaderModelLitOmniShadows.glsl">
+      <Filter>FragmentShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="VertexShaderModelLitOmniShadows.glsl">
+      <Filter>VertexShaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />

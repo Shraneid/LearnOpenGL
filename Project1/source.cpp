@@ -94,26 +94,29 @@ main()
 
     // START OF CODE
     // SETTING UP MAIN TRANSFORM MATRICES BLOCK
-    glGenBuffers(1, &uboMatrixBlock);
-    glBindBuffer(GL_UNIFORM_BUFFER, uboMatrixBlock);
-    glBufferData(GL_UNIFORM_BUFFER,
-                 128,
-                 NULL,
-                 GL_STATIC_DRAW); // 2 * mat4 (64bytes)
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    // glGenBuffers(1, &uboMatrixBlock);
+    // glBindBuffer(GL_UNIFORM_BUFFER, uboMatrixBlock);
+    // glBufferData(GL_UNIFORM_BUFFER,
+    //             128,
+    //             NULL,
+    //             GL_STATIC_DRAW); // 2 * mat4 (64bytes)
+    // glBindBuffer(GL_UNIFORM_BUFFER, 0);
     // END SETTING UP MAIN TRANSFORMS
 
-    // COMPILING SHADERS
+    // SKYBOX
     Shader skyboxShader("VertexShaderCubemap.glsl",
                         "FragmentShaderCubemap.glsl");
     Skybox skybox("resources/cubemaps/space", skyboxShader);
 
-    Shader fullscreenQuadShader("VertexShaderRenderbuffer.glsl",
-                                "FragmentShaderRenderbuffer.glsl");
-    Shader depthPassThroughShader("VertexShaderDepthPassThrough.glsl",
-                                  "FragmentShaderDepthPassThrough.glsl");
-    Shader cubeLitWithShadowsShader("VertexShaderModelLitShadows.glsl",
-                                    "FragmentShaderModelLitShadows.glsl");
+    // COMPILING SHADERS
+    Shader lightSourceShader("VertexShaderBase.glsl",
+                             "FragmentShaderBase.glsl");
+    Shader omniDepthPassThroughShader("VertexShaderOmniShadowMap.glsl",
+                                      "GeometryShaderOmniShadowMap.glsl",
+                                      "FragmentShaderOmniShadowMap.glsl");
+    Shader cubeLitWithOmniShadowsShader(
+      "VertexShaderModelLitOmniShadows.glsl",
+      "FragmentShaderModelLitOmniShadows.glsl");
 
     string cubePath = "resources/models/textured_cube/cube.obj";
     string backpackPath = "resources/models/backpack/backpack.obj";
@@ -125,131 +128,92 @@ main()
     // Model mars = Model(FileSystem::getPath(marsPath));
     // Model rock = Model(FileSystem::getPath(rockPath));
 
+    // light cube
+    vector<glm::vec3> lightCube = { glm::vec3(0, 0, 0),
+                                     glm::vec3(0.1),
+                                     glm::vec3(1),
+                                     glm::vec3(0) };
+
     float floorSize = 10.0f;
     vector<vector<glm::vec3>> posScaleRot = {
-        { glm::vec3(0, -floorSize, 0),
+        // cube
+        { glm::vec3(0, 0, 0),
           glm::vec3(floorSize),
           glm::vec3(1),
           glm::vec3(0) },
 
-        { glm::vec3(0.0f, 1.5f, 0.0),  // pos
+        // objects
+        { glm::vec3(0.0f, 3.5f, 0.0),  // pos
           glm::vec3(0.5),              // scale
           glm::vec3(1, 1, -1),         // rotation axis
           glm::vec3(0) },              // rotation angle
-        { glm::vec3(2.0f, 0.5f, 1.0),  // pos
+        { glm::vec3(3.0f, 0.5f, 1.0),  // pos
           glm::vec3(0.5),              // scale
           glm::vec3(1, 0.3, -0.2),     // rotation axis
           glm::vec3(0) },              // rotation angle
-        { glm::vec3(-1.0f, 1.0f, 2.0), // pos
+        { glm::vec3(-1.0f, 1.0f, 4.0), // pos
           glm::vec3(0.25),             // scale
           glm::vec3(1.0, 0.0, 1.0),    // rotation axis
           glm::vec3(60) },             // rotation angle
     };
 
-    auto d1 = std::make_shared<DirectionalLight>(
-      glm::vec3(2.0f, -4.0f, 1.0f), // direction
-      glm::vec3(0.15f),             // ambient
-      glm::vec3(0.35f),             // diffuse
-      glm::vec3(0.5f)               // specular
-    );
-
-    // auto d1 = std::make_shared<DirectionalLight>(
-    //   glm::vec3(0.5f, -1.0f, -1.2f), // direction
-    //   glm::vec3(0.05f),              // ambient
-    //   glm::vec3(0.4f),               // diffuse
-    //   glm::vec3(0.5f)                // specular
-    //);
-
-    // auto p1 =
-    //   std::make_shared<PointLight>(&greenLightCubeObject.Position, //
-    //   position
-    //                                glm::vec3(0.05f),               // ambient
-    //                                glm::vec3(0.0f, 1.0f, 0.0f),    // diffuse
-    //                                glm::vec3(0.5f),                //
-    //                                specular 1.0f, // constant 0.045f, //
-    //                                linear 0.0075f                         //
-    //                                quadratic
-    //   );
+    auto p1 =
+      std::make_shared<PointLight>(glm::vec3(0.0f, 0.0f, 0.0f), // position
+                                   glm::vec3(0.3f),            // ambient
+                                   glm::vec3(1.5f),            // diffuse
+                                   glm::vec3(2.0f),             // specular
+                                   1.0f,                        // constant
+                                   0.045f,                      // linear
+                                   0.0075f                      // quadratic
+      );
 
     vector<std::shared_ptr<Light>> lights;
-    lights.push_back(d1);
-    // lights.push_back(p1);
+    lights.push_back(p1);
 
-    // SHADOW MAP SETUP
-    unsigned int shadowMapFBO;
-    glGenFramebuffers(1, &shadowMapFBO);
-
+    // OMNIDIRECTIONAL SHADOW MAP SETUP
     const unsigned int SHADOW_WIDTH = 4096, SHADOW_HEIGHT = 4096;
 
-    unsigned int depthMapTextureID;
-    glGenTextures(1, &depthMapTextureID);
-    glBindTexture(GL_TEXTURE_2D, depthMapTextureID);
-    glTexImage2D(GL_TEXTURE_2D,
-                 0,
-                 GL_DEPTH_COMPONENT,
-                 SHADOW_WIDTH,
-                 SHADOW_HEIGHT,
-                 0,
-                 GL_DEPTH_COMPONENT,
-                 GL_FLOAT,
-                 NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    unsigned int depthMapFBO;
+    glGenFramebuffers(1, &depthMapFBO);
 
-    float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+    unsigned int depthCubemapTextureID;
+    glGenTextures(1, &depthCubemapTextureID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemapTextureID);
 
-    glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFBO);
-    glFramebufferTexture2D(GL_FRAMEBUFFER,
-                           GL_DEPTH_ATTACHMENT,
-                           GL_TEXTURE_2D,
-                           depthMapTextureID,
-                           0);
+    for (unsigned int i = 0; i < 6; ++i)
+    {
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+                     0,
+                     GL_DEPTH_COMPONENT,
+                     SHADOW_WIDTH,
+                     SHADOW_HEIGHT,
+                     0,
+                     GL_DEPTH_COMPONENT,
+                     GL_FLOAT,
+                     NULL);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP,
+                        GL_TEXTURE_WRAP_S,
+                        GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP,
+                        GL_TEXTURE_WRAP_T,
+                        GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP,
+                        GL_TEXTURE_WRAP_R,
+                        GL_CLAMP_TO_EDGE);
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+    glFramebufferTexture(GL_FRAMEBUFFER,
+                         GL_DEPTH_ATTACHMENT,
+                         depthCubemapTextureID,
+                         0);
+
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    // TEMP DEPTH MAP RENDERING
-    // clang-format off
-    float vertices[] = {
-        // positions  // texCoords
-        -1.0f, +1.0f, 0.0f,  1.0f,  
-        -1.0f, -1.0f, 0.0f,  0.0f,  
-        +1.0f, -1.0f, 1.0f,  0.0f,
-
-        -1.0f, +1.0f, 0.0f,  1.0f,
-        +1.0f, -1.0f, 1.0f,  0.0f,  
-        +1.0f, +1.0f, 1.0f,  1.0f,
-    };
-    // clang-format on
-
-    unsigned int quadVBO, quadVAO;
-
-    glGenVertexArrays(1, &quadVAO);
-    glGenBuffers(1, &quadVBO);
-
-    glBindVertexArray(quadVAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0,
-                          2,
-                          GL_FLOAT,
-                          GL_FALSE,
-                          4 * sizeof(GL_FLOAT),
-                          (void*)0);
-
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1,
-                          2,
-                          GL_FLOAT,
-                          GL_FALSE,
-                          4 * sizeof(GL_FLOAT),
-                          (void*)(2 * sizeof(float)));
 
     while (!glfwWindowShouldClose(window))
     {
@@ -262,37 +226,64 @@ main()
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        dynamic_pointer_cast<DirectionalLight>(lights[0]).get()->direction =
-          glm::vec3(4.0f * sin(elapsedTime), -4.0f, 4.0f * cos(elapsedTime));
+        float s = std::sin(elapsedTime);
+        float c = std::cos(elapsedTime);
+
+        auto mainLight = dynamic_pointer_cast<PointLight>(lights[0]).get();
+        mainLight->position = glm::vec3(s, c, c + s);
+        //mainLight->position = glm::vec3(0.0f);
+
+        lightCube[0] = mainLight->position;
 
         // RENDER SHADOW MAP
+        float aspect = (float)SHADOW_WIDTH / (float)SHADOW_HEIGHT;
+        float near_plane = 1.0f, far_plane = 25.0f;
+        glm::mat4 shadowProj =
+          glm::perspective(glm::radians(90.0f), aspect, near_plane, far_plane);
+
+        auto lightPos = mainLight->getPosition();
+        std::vector<glm::mat4> shadowTransforms;
+
+        shadowTransforms.push_back(
+          shadowProj * glm::lookAt(lightPos,
+                                   lightPos + glm::vec3(1.0, 0.0, 0.0),
+                                   glm::vec3(0.0, -1.0, 0.0)));
+        shadowTransforms.push_back(
+          shadowProj * glm::lookAt(lightPos,
+                                   lightPos + glm::vec3(-1.0, 0.0, 0.0),
+                                   glm::vec3(0.0, -1.0, 0.0)));
+
+        shadowTransforms.push_back(
+          shadowProj * glm::lookAt(lightPos,
+                                   lightPos + glm::vec3(0.0, 1.0, 0.0),
+                                   glm::vec3(0.0, 0.0, 1.0)));
+        shadowTransforms.push_back(
+          shadowProj * glm::lookAt(lightPos,
+                                   lightPos + glm::vec3(0.0, -1.0, 0.0),
+                                   glm::vec3(0.0, 0.0, -1.0)));
+
+        shadowTransforms.push_back(
+          shadowProj * glm::lookAt(lightPos,
+                                   lightPos + glm::vec3(0.0, 0.0, 1.0),
+                                   glm::vec3(0.0, -1.0, 0.0)));
+        shadowTransforms.push_back(
+          shadowProj * glm::lookAt(lightPos,
+                                   lightPos + glm::vec3(0.0, 0.0, -1.0),
+                                   glm::vec3(0.0, -1.0, 0.0)));
+
         glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
-        glCullFace(GL_FRONT);
-        glEnable(GL_DEPTH_TEST);
-        glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
         glClear(GL_DEPTH_BUFFER_BIT);
 
-        float near_plane = 1.0f, far_plane = 15.0f;
-        glm::mat4 lightProjection = glm::ortho(-far_plane,
-                                               far_plane,
-                                               -far_plane,
-                                               far_plane,
-                                               near_plane,
-                                               far_plane);
-
-        auto lightDir =
-          dynamic_pointer_cast<DirectionalLight>(lights[0])->direction;
-        float lightPosMoveAwayForce = 1.5f;
-        glm::vec3 lightPos = -lightDir * lightPosMoveAwayForce;
-
-        glm::mat4 lightView = glm::lookAt(lightPos,
-                                          glm::vec3(0.0f, 0.0f, 0.0f),
-                                          glm::vec3(0.0f, 1.0f, 0.0f));
-
-        glm::mat4 lightSpaceMatrix = lightProjection * lightView;
-
-        depthPassThroughShader.use();
-        depthPassThroughShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+        omniDepthPassThroughShader.use();
+        for (int i = 0; i < shadowTransforms.size(); ++i)
+        {
+            omniDepthPassThroughShader.setMat4("shadowMatrices[" +
+                                                 std::to_string(i) + "]",
+                                               shadowTransforms[i]);
+        }
+        omniDepthPassThroughShader.setFloat("far_plane", far_plane);
+        omniDepthPassThroughShader.setVec3("lightPos", lightPos);
 
         for (int i = 0; i < posScaleRot.size(); i++)
         {
@@ -302,32 +293,21 @@ main()
             model = glm::rotate(model, vectors[3].x, vectors[2]);
             model = glm::scale(model, vectors[1]);
 
-            depthPassThroughShader.setMat4("model", model);
+            omniDepthPassThroughShader.setMat4("model", model);
 
             if (i == 0)
             {
-                cube.Draw(depthPassThroughShader);
+                cube.Draw(omniDepthPassThroughShader);
             }
             else
             {
-                backpack.Draw(depthPassThroughShader);
+                backpack.Draw(omniDepthPassThroughShader);
             }
         }
 
         glViewport(0, 0, windowWidth, windowHeight);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glCullFace(GL_BACK);
         // SHADOW MAP DONE
-
-        // TEMP
-        // fullscreenQuadShader.use();
-        // fullscreenQuadShader.setInt("screenTexture", 0);
-        // glBindVertexArray(quadVAO);
-        // glDisable(GL_DEPTH_TEST);
-        // glActiveTexture(GL_TEXTURE0);
-        // glBindTexture(GL_TEXTURE_2D, depthMapTextureID);
-        // glDrawArrays(GL_TRIANGLES, 0, 6);
-        // END TEMP
 
         // RENDER NORMAL SCENE
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -340,10 +320,10 @@ main()
                                       0.1f,
                                       1000.0f);
 
-        cubeLitWithShadowsShader.use();
+        cubeLitWithOmniShadowsShader.use();
         glActiveTexture(GL_TEXTURE0);
-        cubeLitWithShadowsShader.setInt("shadowMap", 0);
-        cubeLitWithShadowsShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+        cubeLitWithOmniShadowsShader.setInt("omniShadowMap", 0);
+        cubeLitWithOmniShadowsShader.setFloat("far_plane", far_plane);
         for (int i = 0; i < posScaleRot.size(); i++)
         {
             auto vectors = posScaleRot[i];
@@ -355,23 +335,38 @@ main()
 
             for (auto light : lights)
             {
-                light.get()->setUniforms(cubeLitWithShadowsShader);
+                light.get()->setUniforms(cubeLitWithOmniShadowsShader);
             }
 
-            cubeLitWithShadowsShader.setMat4("model", model);
-            cubeLitWithShadowsShader.setMat4("view", view);
-            cubeLitWithShadowsShader.setMat4("projection", projection);
-            cubeLitWithShadowsShader.setVec3("viewPos", camera.Position);
+            cubeLitWithOmniShadowsShader.setMat4("model", model);
+            cubeLitWithOmniShadowsShader.setMat4("view", view);
+            cubeLitWithOmniShadowsShader.setMat4("projection", projection);
+            cubeLitWithOmniShadowsShader.setVec3("viewPos", camera.Position);
 
             if (i == 0)
             {
-                cube.Draw(cubeLitWithShadowsShader);
+                cubeLitWithOmniShadowsShader.setBool("reverse_normals", true);
+                cube.Draw(cubeLitWithOmniShadowsShader);
             }
             else
             {
-                backpack.Draw(cubeLitWithShadowsShader);
+                cubeLitWithOmniShadowsShader.setBool("reverse_normals", false);
+                backpack.Draw(cubeLitWithOmniShadowsShader);
             }
         }
+
+        lightSourceShader.use();
+
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, lightCube[0]);
+        model = glm::scale(model, lightCube[1]);
+        model = glm::rotate(model, lightCube[3].x, lightCube[2]);
+
+        lightSourceShader.setMat4("model", model);
+        lightSourceShader.setMat4("view", view);
+        lightSourceShader.setMat4("projection", projection);
+        lightSourceShader.setVec3("lightColor", glm::vec3(1.0f));
+        cube.Draw(lightSourceShader);
 
         skybox.Draw(projection, view);
 

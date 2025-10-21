@@ -104,9 +104,9 @@ class Skybox
         glDepthFunc(GL_LEQUAL);
 
         shader.use();
-        glActiveTexture(GL_TEXTURE0);
+        glActiveTexture(GL_TEXTURE10);
         glBindTexture(GL_TEXTURE_CUBE_MAP, textureId);
-        shader.setInt("skybox", 0);
+        shader.setInt("skybox", 10);
         shader.setMat4("view", glm::mat4(glm::mat3(view)));
         shader.setMat4("projection", projection);
 
