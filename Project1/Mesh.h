@@ -6,6 +6,7 @@ struct Vertex
 {
     glm::vec3 Position;
     glm::vec3 Normal;
+    glm::vec3 Tangent;
     glm::vec2 TexCoords;
 };
 
@@ -39,6 +40,7 @@ class Mesh
     {
         unsigned int diffuseNr = 1;
         unsigned int specularNr = 1;
+        unsigned int normalNr = 1;
         for (unsigned int i = 0; i < textures.size(); i++) {
             glActiveTexture(GL_TEXTURE1 + i);
 
@@ -48,6 +50,8 @@ class Mesh
                 number = std::to_string(diffuseNr++);
             else if (name == "texture_specular")
                 number = std::to_string(specularNr++);
+            else if (name == "texture_normal")
+                number = std::to_string(normalNr++);
 
             shader.setInt(("material." + name + number).c_str(), i + 1);
             glBindTexture(GL_TEXTURE_2D, textures[i].id);
@@ -98,6 +102,14 @@ class Mesh
 
         glEnableVertexAttribArray(2);
         glVertexAttribPointer(2,
+                              3,
+                              GL_FLOAT,
+                              GL_FALSE,
+                              sizeof(Vertex),
+                              (void*)offsetof(Vertex, Tangent));
+
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3,
                               2,
                               GL_FLOAT,
                               GL_FALSE,

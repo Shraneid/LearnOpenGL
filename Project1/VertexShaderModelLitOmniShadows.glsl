@@ -2,7 +2,8 @@
 
 layout (location = 0) in vec3 Pos;
 layout (location = 1) in vec3 Nor;
-layout (location = 2) in vec2 texCoords;
+layout (location = 2) in vec3 Tangent;
+layout (location = 3) in vec2 texCoords;
 
 out VS_OUT {
 	vec3 FragPos;

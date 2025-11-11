@@ -117,19 +117,32 @@ main()
     Shader cubeLitWithOmniShadowsShader(
       "VertexShaderModelLitOmniShadows.glsl",
       "FragmentShaderModelLitOmniShadows.glsl");
+    Shader cubeLitWithOmniShadowsAndNormalMapShader(
+      "VertexShaderModelLitOmniShadowsNormalMap.glsl",
+      "FragmentShaderModelLitOmniShadowsNormalMap.glsl");
 
     string cubePath = "resources/models/textured_cube/cube.obj";
+    string brickCubePath = "resources/models/brick_cube/brick.obj";
+    string brickPlanePath = "resources/models/brick_plane/brick_plane.obj";
     string backpackPath = "resources/models/backpack/backpack.obj";
     string marsPath = "resources/models/planet/planet.obj";
     string rockPath = "resources/models/rock/rock.obj";
 
     Model cube = Model(FileSystem::getPath(cubePath));
-    Model backpack = Model(FileSystem::getPath(backpackPath));
+    Model brickCube = Model(FileSystem::getPath(brickCubePath));
+    //Model brickPlane = Model(FileSystem::getPath(brickPlanePath));
+    //Model backpack = Model(FileSystem::getPath(backpackPath));
     // Model mars = Model(FileSystem::getPath(marsPath));
     // Model rock = Model(FileSystem::getPath(rockPath));
 
     // light cube
     vector<glm::vec3> lightCube = { glm::vec3(0, 0, 0),
+                                     glm::vec3(0.1),
+                                     glm::vec3(1),
+                                     glm::vec3(0) };
+
+    // light cube
+    vector<glm::vec3> redLightCube = { glm::vec3(0, 0, 0),
                                      glm::vec3(0.1),
                                      glm::vec3(1),
                                      glm::vec3(0) };
@@ -142,33 +155,50 @@ main()
           glm::vec3(1),
           glm::vec3(0) },
 
+          
+        { glm::vec3(0.0f, 0.0f, 0.0), // pos
+          glm::vec3(1.0),             // scale
+          glm::vec3(1, 1, 1),        // rotation axis
+          glm::vec3(0) },             // rotation angle
+
         // objects
-        { glm::vec3(0.0f, 3.5f, 0.0),  // pos
-          glm::vec3(0.5),              // scale
-          glm::vec3(1, 1, -1),         // rotation axis
-          glm::vec3(0) },              // rotation angle
-        { glm::vec3(3.0f, 0.5f, 1.0),  // pos
-          glm::vec3(0.5),              // scale
-          glm::vec3(1, 0.3, -0.2),     // rotation axis
-          glm::vec3(0) },              // rotation angle
-        { glm::vec3(-1.0f, 1.0f, 4.0), // pos
-          glm::vec3(0.25),             // scale
-          glm::vec3(1.0, 0.0, 1.0),    // rotation axis
-          glm::vec3(60) },             // rotation angle
+        //{ glm::vec3(0.0f, 3.5f, 0.0),  // pos
+        //  glm::vec3(0.5),              // scale
+        //  glm::vec3(1, 1, -1),         // rotation axis
+        //  glm::vec3(0) },              // rotation angle
+        //{ glm::vec3(3.0f, 0.5f, 1.0),  // pos
+        //  glm::vec3(0.5),              // scale
+        //  glm::vec3(1, 0.3, -0.2),     // rotation axis
+        //  glm::vec3(0) },              // rotation angle
+        //{ glm::vec3(-1.0f, 1.0f, 4.0), // pos
+        //  glm::vec3(0.25),             // scale
+        //  glm::vec3(1.0, 0.0, 1.0),    // rotation axis
+        //  glm::vec3(60) },             // rotation angle
     };
 
     auto p1 =
-      std::make_shared<PointLight>(glm::vec3(0.0f, 0.0f, 0.0f), // position
-                                   glm::vec3(0.3f),            // ambient
-                                   glm::vec3(1.5f),            // diffuse
-                                   glm::vec3(2.0f),             // specular
+      std::make_shared<PointLight>(glm::vec3(1.0f, 0.0f, 2.0f), // position
+                                   glm::vec3(0.2f),             // ambient
+                                   glm::vec3(0.5f),             // diffuse
+                                   glm::vec3(1.0f),             // specular
                                    1.0f,                        // constant
-                                   0.045f,                      // linear
-                                   0.0075f                      // quadratic
+                                   0.22f,                       // linear
+                                   0.20f                        // quadratic
+      );
+
+    auto p2 =
+      std::make_shared<PointLight>(glm::vec3(1.0f, 0.0f, 2.0f), // position
+                                   glm::vec3(0.2f, 0.0f, 0.0f), // ambient
+                                   glm::vec3(0.5f, 0.0f, 0.0f), // diffuse
+                                   glm::vec3(1.0f, 0.0f, 0.0f), // specular
+                                   1.0f,                        // constant
+                                   0.7f,                        // linear
+                                   1.8f                        // quadratic
       );
 
     vector<std::shared_ptr<Light>> lights;
     lights.push_back(p1);
+    lights.push_back(p2);
 
     // OMNIDIRECTIONAL SHADOW MAP SETUP
     const unsigned int SHADOW_WIDTH = 4096, SHADOW_HEIGHT = 4096;
@@ -226,14 +256,21 @@ main()
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        float s = std::sin(elapsedTime);
-        float c = std::cos(elapsedTime);
+        float speed = 0.5;
+
+        float s = std::sin(elapsedTime * speed);
+        float c = std::cos(elapsedTime * speed);
 
         auto mainLight = dynamic_pointer_cast<PointLight>(lights[0]).get();
-        mainLight->position = glm::vec3(s, c, c + s);
-        //mainLight->position = glm::vec3(0.0f);
+        mainLight->position = glm::vec3(s * 2.0f, 0, c * 2.5f);
+
+        auto redLight = dynamic_pointer_cast<PointLight>(lights[1]).get();
+        redLight->position = glm::vec3(s * 2.0f, 0, 1.15f);
+        //mainLight->position = glm::vec3(s * 2.0f, 0, 1.1f);
+        //mainLight->position = glm::vec3(1.0f, 0.0f, 4.0f);
 
         lightCube[0] = mainLight->position;
+        redLightCube[0] = redLight->position;
 
         // RENDER SHADOW MAP
         float aspect = (float)SHADOW_WIDTH / (float)SHADOW_HEIGHT;
@@ -301,7 +338,7 @@ main()
             }
             else
             {
-                backpack.Draw(omniDepthPassThroughShader);
+                brickCube.Draw(omniDepthPassThroughShader);
             }
         }
 
@@ -320,10 +357,11 @@ main()
                                       0.1f,
                                       1000.0f);
 
-        cubeLitWithOmniShadowsShader.use();
+        cubeLitWithOmniShadowsAndNormalMapShader.use();
         glActiveTexture(GL_TEXTURE0);
-        cubeLitWithOmniShadowsShader.setInt("omniShadowMap", 0);
-        cubeLitWithOmniShadowsShader.setFloat("far_plane", far_plane);
+        cubeLitWithOmniShadowsAndNormalMapShader.setInt("omniShadowMap", 0);
+        cubeLitWithOmniShadowsAndNormalMapShader.setFloat("far_plane",
+                                                          far_plane);
         for (int i = 0; i < posScaleRot.size(); i++)
         {
             auto vectors = posScaleRot[i];
@@ -335,23 +373,28 @@ main()
 
             for (auto light : lights)
             {
-                light.get()->setUniforms(cubeLitWithOmniShadowsShader);
+                light.get()->setUniforms(
+                  cubeLitWithOmniShadowsAndNormalMapShader);
             }
 
-            cubeLitWithOmniShadowsShader.setMat4("model", model);
-            cubeLitWithOmniShadowsShader.setMat4("view", view);
-            cubeLitWithOmniShadowsShader.setMat4("projection", projection);
-            cubeLitWithOmniShadowsShader.setVec3("viewPos", camera.Position);
+            cubeLitWithOmniShadowsAndNormalMapShader.setMat4("model", model);
+            cubeLitWithOmniShadowsAndNormalMapShader.setMat4("view", view);
+            cubeLitWithOmniShadowsAndNormalMapShader.setMat4("projection",
+                                                             projection);
+            cubeLitWithOmniShadowsAndNormalMapShader.setVec3("viewPos",
+                                                             camera.Position);
 
             if (i == 0)
             {
-                cubeLitWithOmniShadowsShader.setBool("reverse_normals", true);
-                cube.Draw(cubeLitWithOmniShadowsShader);
+                cubeLitWithOmniShadowsAndNormalMapShader.setBool(
+                  "reverse_normals",
+                  true);
+                cube.Draw(cubeLitWithOmniShadowsAndNormalMapShader);
             }
             else
             {
-                cubeLitWithOmniShadowsShader.setBool("reverse_normals", false);
-                backpack.Draw(cubeLitWithOmniShadowsShader);
+                cubeLitWithOmniShadowsAndNormalMapShader.setBool("reverse_normals", false);
+                brickCube.Draw(cubeLitWithOmniShadowsAndNormalMapShader);
             }
         }
 
@@ -366,6 +409,17 @@ main()
         lightSourceShader.setMat4("view", view);
         lightSourceShader.setMat4("projection", projection);
         lightSourceShader.setVec3("lightColor", glm::vec3(1.0f));
+        cube.Draw(lightSourceShader);
+
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, redLightCube[0]);
+        model = glm::scale(model, redLightCube[1]);
+        model = glm::rotate(model, redLightCube[3].x, redLightCube[2]);
+
+        lightSourceShader.setMat4("model", model);
+        lightSourceShader.setMat4("view", view);
+        lightSourceShader.setMat4("projection", projection);
+        lightSourceShader.setVec3("lightColor", glm::vec3(1.0f, 0.0f, 0.0f));
         cube.Draw(lightSourceShader);
 
         skybox.Draw(projection, view);

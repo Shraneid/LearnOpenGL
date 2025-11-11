@@ -183,6 +183,12 @@
     <FxCompile Include="VertexShaderModelLitOmniShadows.glsl">
       <Filter>VertexShaders</Filter>
     </FxCompile>
+    <FxCompile Include="FragmentShaderModelLitOmniShadowsNormalMap.glsl">
+      <Filter>FragmentShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="VertexShaderModelLitOmniShadowsNormalMap.glsl">
+      <Filter>VertexShaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />
