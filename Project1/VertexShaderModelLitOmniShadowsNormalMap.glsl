@@ -26,8 +26,8 @@ void main()
 //	float reverse_normals_factor = -2.0 * (reverse_normals - 0.5);
 	vec3 WorldSpaceNormal = normalize(NormalMatrix * Normal);
 
-//	vec3 tangent = vec3(1,0,0);
 	vec3 tangent = normalize(NormalMatrix * Tangent);
+	tangent = normalize(tangent - dot(tangent, WorldSpaceNormal) * WorldSpaceNormal);
 	
 	vec3 Bitangent = cross(WorldSpaceNormal, tangent);
 	vs_out.TBN = mat3(tangent, Bitangent, WorldSpaceNormal);

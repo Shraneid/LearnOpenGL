@@ -256,18 +256,22 @@ main()
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        float speed = 0.5;
+        float fast_speed = 2.0;
+        float slow_speed = 0.5;
 
-        float s = std::sin(elapsedTime * speed);
-        float c = std::cos(elapsedTime * speed);
+        float fast_s = std::sin(elapsedTime * fast_speed);
+        float fast_c = std::cos(elapsedTime * fast_speed);
+
+        float slow_s = std::sin(elapsedTime * slow_speed);
+        float slow_c = std::cos(elapsedTime * slow_speed);
 
         auto mainLight = dynamic_pointer_cast<PointLight>(lights[0]).get();
-        mainLight->position = glm::vec3(s * 2.0f, 0, c * 2.5f);
+        mainLight->position = glm::vec3(slow_s * 2.0f, 0, slow_c * 2.5f);
+        // mainLight->position = glm::vec3(s * 2.0f, 0, 1.1f);
+        // mainLight->position = glm::vec3(1.0f, 0.0f, 4.0f);
 
         auto redLight = dynamic_pointer_cast<PointLight>(lights[1]).get();
-        redLight->position = glm::vec3(s * 2.0f, 0, 1.15f);
-        //mainLight->position = glm::vec3(s * 2.0f, 0, 1.1f);
-        //mainLight->position = glm::vec3(1.0f, 0.0f, 4.0f);
+        redLight->position = glm::vec3(0, fast_s * 1.0f, 1.15f);
 
         lightCube[0] = mainLight->position;
         redLightCube[0] = redLight->position;
