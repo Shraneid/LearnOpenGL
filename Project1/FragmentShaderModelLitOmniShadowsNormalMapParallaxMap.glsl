@@ -78,7 +78,7 @@ void main()
 vec3 CalcPointLight(PointLight light, vec3 fragPos, vec3 viewDir) {
 	vec3 diffuse_sample = vec3(texture(material.texture_diffuse1, fs_in.TexCoords));
 	vec3 normal_sample = vec3(texture(material.texture_normal1, fs_in.TexCoords));
-	vec3 parallax_sample = vec3(texture(material.texture_parallax1, fs_in.TexCoords));
+	float parallax_sample = texture(material.texture_parallax1, fs_in.TexCoords).r;
 
 	vec3 normal = normal_sample * 2.0 - 1.0;
 	vec3 worldSpaceNormal = fs_in.TBN * normal;
@@ -97,7 +97,7 @@ vec3 CalcPointLight(PointLight light, vec3 fragPos, vec3 viewDir) {
 	vec3 diffuse = light.diffuse * diff * diffuse_sample;
 	vec3 specular = light.specular * spec * vec3(texture(material.texture_specular1, fs_in.TexCoords));
 
-	float distance = length(light.position - fs_in.FragPos);
+	float distance = length(light.position - fragPos);
 	float attenuation = 1.0 / (light.constant + light.linear * distance + 
 								light.quadratic * pow(distance, 2));
 
@@ -105,11 +105,11 @@ vec3 CalcPointLight(PointLight light, vec3 fragPos, vec3 viewDir) {
 	diffuse *= attenuation;
 	specular *= attenuation;
 
-	float shadow = OmniShadowCalculation(fs_in.FragPos, light.position);
+	float shadow = OmniShadowCalculation(fragPos, light.position);
 
 	vec3 litColor =  ambient + (1.0 - shadow) * (diffuse + specular);
 
-	return parallax_sample;
+	return litColor;
 }
 
 float OmniShadowCalculation(vec3 fragPos, vec3 lightPos){

@@ -189,6 +189,12 @@
     <FxCompile Include="VertexShaderModelLitOmniShadowsNormalMap.glsl">
       <Filter>VertexShaders</Filter>
     </FxCompile>
+    <FxCompile Include="FragmentShaderModelLitOmniShadowsNormalMapParallaxMap.glsl">
+      <Filter>FragmentShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="VertexShaderModelLitOmniShadowsNormalMapParallaxMap.glsl">
+      <Filter>VertexShaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />

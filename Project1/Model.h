@@ -142,6 +142,14 @@ class Model
             textures.insert(textures.end(),
                             normalMaps.begin(),
                             normalMaps.end());
+
+            vector<Texture> parallaxMaps =
+              loadMaterialTextures(material,
+                                   aiTextureType_HEIGHT,
+                                   "texture_parallax");
+            textures.insert(textures.end(),
+                            parallaxMaps.begin(),
+                            parallaxMaps.end());
         }
 
         return Mesh(vertices, indices, textures);

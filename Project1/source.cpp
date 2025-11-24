@@ -114,22 +114,21 @@ main()
     Shader omniDepthPassThroughShader("VertexShaderOmniShadowMap.glsl",
                                       "GeometryShaderOmniShadowMap.glsl",
                                       "FragmentShaderOmniShadowMap.glsl");
-    Shader cubeLitWithOmniShadowsShader(
-      "VertexShaderModelLitOmniShadows.glsl",
-      "FragmentShaderModelLitOmniShadows.glsl");
-    Shader cubeLitWithOmniShadowsAndNormalMapShader(
-      "VertexShaderModelLitOmniShadowsNormalMap.glsl",
-      "FragmentShaderModelLitOmniShadowsNormalMap.glsl");
+    Shader cubeLitWithOmniShadowsNormalParallaxShader(
+      "VertexShaderModelLitOmniShadowsNormalMapParallaxMap.glsl",
+      "FragmentShaderModelLitOmniShadowsNormalMapParallaxMap.glsl");
 
     string cubePath = "resources/models/textured_cube/cube.obj";
     string brickCubePath = "resources/models/brick_cube/brick.obj";
+    string brickParallaxCubePath = "resources/models/displaced_brick_cube/brick.obj";
     string brickPlanePath = "resources/models/brick_plane/brick_plane.obj";
     string backpackPath = "resources/models/backpack/backpack.obj";
     string marsPath = "resources/models/planet/planet.obj";
     string rockPath = "resources/models/rock/rock.obj";
 
     Model cube = Model(FileSystem::getPath(cubePath));
-    Model brickCube = Model(FileSystem::getPath(brickCubePath));
+    //Model brickCube = Model(FileSystem::getPath(brickCubePath));
+    Model brickCube = Model(FileSystem::getPath(brickParallaxCubePath));
     //Model brickPlane = Model(FileSystem::getPath(brickPlanePath));
     //Model backpack = Model(FileSystem::getPath(backpackPath));
     // Model mars = Model(FileSystem::getPath(marsPath));
@@ -158,7 +157,7 @@ main()
           
         { glm::vec3(0.0f, 0.0f, 0.0), // pos
           glm::vec3(1.0),             // scale
-          glm::vec3(1, 1, 1),        // rotation axis
+          glm::vec3(1, 1, 1),         // rotation axis
           glm::vec3(0) },             // rotation angle
 
         // objects
@@ -361,10 +360,10 @@ main()
                                       0.1f,
                                       1000.0f);
 
-        cubeLitWithOmniShadowsAndNormalMapShader.use();
+        cubeLitWithOmniShadowsNormalParallaxShader.use();
         glActiveTexture(GL_TEXTURE0);
-        cubeLitWithOmniShadowsAndNormalMapShader.setInt("omniShadowMap", 0);
-        cubeLitWithOmniShadowsAndNormalMapShader.setFloat("far_plane",
+        cubeLitWithOmniShadowsNormalParallaxShader.setInt("omniShadowMap", 0);
+        cubeLitWithOmniShadowsNormalParallaxShader.setFloat("far_plane",
                                                           far_plane);
         for (int i = 0; i < posScaleRot.size(); i++)
         {
@@ -378,27 +377,29 @@ main()
             for (auto light : lights)
             {
                 light.get()->setUniforms(
-                  cubeLitWithOmniShadowsAndNormalMapShader);
+                  cubeLitWithOmniShadowsNormalParallaxShader);
             }
 
-            cubeLitWithOmniShadowsAndNormalMapShader.setMat4("model", model);
-            cubeLitWithOmniShadowsAndNormalMapShader.setMat4("view", view);
-            cubeLitWithOmniShadowsAndNormalMapShader.setMat4("projection",
+            cubeLitWithOmniShadowsNormalParallaxShader.setMat4("model", model);
+            cubeLitWithOmniShadowsNormalParallaxShader.setMat4("view", view);
+            cubeLitWithOmniShadowsNormalParallaxShader.setMat4("projection",
                                                              projection);
-            cubeLitWithOmniShadowsAndNormalMapShader.setVec3("viewPos",
+            cubeLitWithOmniShadowsNormalParallaxShader.setVec3("viewPos",
                                                              camera.Position);
 
             if (i == 0)
             {
-                cubeLitWithOmniShadowsAndNormalMapShader.setBool(
+                cubeLitWithOmniShadowsNormalParallaxShader.setFloat(
                   "reverse_normals",
-                  true);
-                cube.Draw(cubeLitWithOmniShadowsAndNormalMapShader);
+                  1.0f);
+                cube.Draw(cubeLitWithOmniShadowsNormalParallaxShader);
             }
             else
             {
-                cubeLitWithOmniShadowsAndNormalMapShader.setBool("reverse_normals", false);
-                brickCube.Draw(cubeLitWithOmniShadowsAndNormalMapShader);
+                cubeLitWithOmniShadowsNormalParallaxShader.setFloat(
+                  "reverse_normals",
+                  0.0f);
+                brickCube.Draw(cubeLitWithOmniShadowsNormalParallaxShader);
             }
         }
 
