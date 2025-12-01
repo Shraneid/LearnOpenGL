@@ -265,9 +265,8 @@ main()
         float slow_c = std::cos(elapsedTime * slow_speed);
 
         auto mainLight = dynamic_pointer_cast<PointLight>(lights[0]).get();
-        mainLight->position = glm::vec3(slow_s * 2.0f, 0, slow_c * 2.5f);
-        // mainLight->position = glm::vec3(s * 2.0f, 0, 1.1f);
-        // mainLight->position = glm::vec3(1.0f, 0.0f, 4.0f);
+        //mainLight->position = glm::vec3(slow_s * 2.0f, 0, slow_c * 2.5f);
+        mainLight->position = glm::vec3(.75f, 1.3f, 1.3f);
 
         auto redLight = dynamic_pointer_cast<PointLight>(lights[1]).get();
         redLight->position = glm::vec3(0, fast_s * 1.0f, 1.15f);
@@ -365,6 +364,8 @@ main()
         cubeLitWithOmniShadowsNormalParallaxShader.setInt("omniShadowMap", 0);
         cubeLitWithOmniShadowsNormalParallaxShader.setFloat("far_plane",
                                                           far_plane);
+        cubeLitWithOmniShadowsNormalParallaxShader.setFloat("parallax_strength",
+                                                          0.1f);
         for (int i = 0; i < posScaleRot.size(); i++)
         {
             auto vectors = posScaleRot[i];
@@ -396,10 +397,15 @@ main()
             }
             else
             {
+                glEnable(GL_CULL_FACE);
+                glCullFace(GL_BACK);
+                
                 cubeLitWithOmniShadowsNormalParallaxShader.setFloat(
                   "reverse_normals",
                   0.0f);
                 brickCube.Draw(cubeLitWithOmniShadowsNormalParallaxShader);
+
+                glDisable(GL_CULL_FACE);
             }
         }
 
