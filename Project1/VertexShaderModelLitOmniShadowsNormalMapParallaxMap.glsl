@@ -42,12 +42,13 @@ out VS_OUT {
 void main()
 {
 	float reverse_normals_factor = -2.0 * (reverse_normals - 0.5);
-	vec3 N = reverse_normals_factor * normalize(Normal);
+	vec3 N = vec3(normalize(model * vec4(Normal, 0.0)));
+	N = reverse_normals_factor * normalize(Normal);
 
 	vec3 T = vec3(normalize(model * vec4(Tangent, 0.0)));
-	T = T - dot(T, N) * N;
+	T = normalize(T - dot(T, N) * N);
 	
-	vec3 B = cross(N, T);
+	vec3 B = cross(T, N);
 
 	mat3 TBN = mat3(T, B, N);
 	mat3 inverse_TBN = transpose(TBN); // TBN^-1 = TBN^T

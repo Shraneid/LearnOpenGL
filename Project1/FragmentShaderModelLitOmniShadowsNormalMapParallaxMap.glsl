@@ -90,11 +90,27 @@ void main()
 
 
 vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir){
+	const float nbOfLayers = 10;
+	float layerDepth = 1.0/nbOfLayers;
+	float currentLayerDepth = 0.0;
+
+	vec2 P = viewDir.xy * parallax_strength;
+	vec2 deltaTexCoords = P / nbOfLayers;
+
+	vec2 currentTexCoords = texCoords;
 	float parallax_sample = texture(material.texture_parallax1, texCoords).r;
+	float currentDepthMapValue = parallax_sample;
 
-	vec2 textureDisplacement = viewDir.xy / viewDir.z * parallax_sample * parallax_strength;
+	while (currentLayerDepth < currentDepthMapValue){
+		currentLayerDepth += layerDepth;
 
-	return texCoords + textureDisplacement;
+		currentTexCoords -= deltaTexCoords;
+
+		parallax_sample = texture(material.texture_parallax1, currentTexCoords).r;
+		currentDepthMapValue = parallax_sample;
+	}
+
+	return currentTexCoords;
 }
 
 
