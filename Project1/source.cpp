@@ -121,7 +121,7 @@ main()
     string cubePath = "resources/models/textured_cube/cube.obj";
     string brickCubePath = "resources/models/brick_cube/brick.obj";
     string brickParallaxCubePath = "resources/models/displaced_brick_cube/brick.obj";
-    string toyPath = "resources/models/new_cube/Untitled.obj";
+    string toyPath = "resources/models/toy/Untitled.obj";
     string brickPlanePath = "resources/models/brick_plane/brick_plane.obj";
     string backpackPath = "resources/models/backpack/backpack.obj";
     string marsPath = "resources/models/planet/planet.obj";
