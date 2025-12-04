@@ -5,6 +5,7 @@
 out vec4 FragColor;
 
 in VS_OUT {
+	vec3 Debug;
 	vec3 FragPos;
 	vec2 TexCoords;
 	vec3 TangentViewPos;
@@ -44,6 +45,7 @@ struct Material {
 };
 uniform Material material;
 
+uniform vec3 viewPos;
 uniform sampler2D shadowMap;
 uniform samplerCube omniShadowMap;
 uniform float far_plane;
@@ -53,7 +55,7 @@ uniform float parallax_strength;
 vec3 CalcPointLight(PointLight light, vec3 lightPos, vec3 fragPos, vec3 viewDir, vec2 texCoords);
 vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir);
 
-float OmniShadowCalculation(vec3 tangentFragPos, vec3 tangentLightPos, vec3 worldLightPos);
+float OmniShadowCalculation(vec3 worldFragPos, vec3 worldLightPos);
 
 vec3 sampleOffsetDirections[20] = vec3[]
 (
@@ -90,13 +92,18 @@ void main()
 
 
 vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir){
-	const float nbOfLayers = 10;
+	const float minLayers = 8.0;
+	const float maxLayers = 32.0;
+
+	float nbOfLayers = mix(minLayers, maxLayers, abs(dot(vec3(0,0,1), viewDir)));
 	float layerDepth = 1.0/nbOfLayers;
 	float currentLayerDepth = 0.0;
 
-	vec2 P = viewDir.xy * parallax_strength;
+	vec2 P = viewDir.xy / viewDir.z * parallax_strength;
+	P.y = -P.y;
 	vec2 deltaTexCoords = P / nbOfLayers;
 
+	vec2 previousTexCoords = texCoords;
 	vec2 currentTexCoords = texCoords;
 	float parallax_sample = texture(material.texture_parallax1, texCoords).r;
 	float currentDepthMapValue = parallax_sample;
@@ -104,6 +111,7 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir){
 	while (currentLayerDepth < currentDepthMapValue){
 		currentLayerDepth += layerDepth;
 
+		previousTexCoords = currentTexCoords;
 		currentTexCoords -= deltaTexCoords;
 
 		parallax_sample = texture(material.texture_parallax1, currentTexCoords).r;
@@ -132,7 +140,7 @@ vec3 CalcPointLight(PointLight light, vec3 tangentLightPos, vec3 tangentFragPos,
 	if (diff < 0.001)
 		spec = 0;
 
-	vec3 ambient = light.ambient * 0.1 * diffuse_sample;
+	vec3 ambient = light.ambient * 0.5 * diffuse_sample;
 	vec3 diffuse = light.diffuse * diff * diffuse_sample;
 	vec3 specular = light.specular * spec * specular_sample;
 
@@ -144,7 +152,7 @@ vec3 CalcPointLight(PointLight light, vec3 tangentLightPos, vec3 tangentFragPos,
 	diffuse *= attenuation;
 	specular *= attenuation;
 
-	float shadow = OmniShadowCalculation(tangentFragPos, tangentLightPos, light.position);
+	float shadow = OmniShadowCalculation(fs_in.FragPos, light.position);
 
 	vec3 litColor =  ambient + (1.0 - shadow) * (diffuse + specular);
 
@@ -152,12 +160,12 @@ vec3 CalcPointLight(PointLight light, vec3 tangentLightPos, vec3 tangentFragPos,
 }
 
 
-float OmniShadowCalculation(vec3 tangentFragPos, vec3 tangentLightPos, vec3 worldLightPos){
+float OmniShadowCalculation(vec3 worldFragPos, vec3 worldLightPos){
 	float shadow = 0.0;
 	float bias = 0.05;
 	int samples = 20;
 
-	float viewDistance = length(fs_in.TangentViewPos - tangentFragPos);
+	float viewDistance = length(viewPos - worldFragPos);
 	float diskRadius = (1.0 + (viewDistance / far_plane)) / 50.0;
 	
 	vec3 fragToLight = fs_in.FragPos - worldLightPos;

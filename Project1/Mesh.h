@@ -7,6 +7,7 @@ struct Vertex
     glm::vec3 Position;
     glm::vec3 Normal;
     glm::vec3 Tangent;
+    glm::vec3 Bitangent;
     glm::vec2 TexCoords;
 };
 
@@ -113,6 +114,14 @@ class Mesh
 
         glEnableVertexAttribArray(3);
         glVertexAttribPointer(3,
+                              3,
+                              GL_FLOAT,
+                              GL_FALSE,
+                              sizeof(Vertex),
+                              (void*)offsetof(Vertex, Bitangent));
+
+        glEnableVertexAttribArray(4);
+        glVertexAttribPointer(4,
                               2,
                               GL_FLOAT,
                               GL_FALSE,

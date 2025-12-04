@@ -121,6 +121,7 @@ main()
     string cubePath = "resources/models/textured_cube/cube.obj";
     string brickCubePath = "resources/models/brick_cube/brick.obj";
     string brickParallaxCubePath = "resources/models/displaced_brick_cube/brick.obj";
+    string toyPath = "resources/models/new_cube/Untitled.obj";
     string brickPlanePath = "resources/models/brick_plane/brick_plane.obj";
     string backpackPath = "resources/models/backpack/backpack.obj";
     string marsPath = "resources/models/planet/planet.obj";
@@ -128,7 +129,8 @@ main()
 
     Model cube = Model(FileSystem::getPath(cubePath));
     //Model brickCube = Model(FileSystem::getPath(brickCubePath));
-    Model brickCube = Model(FileSystem::getPath(brickParallaxCubePath));
+    //Model brickCube = Model(FileSystem::getPath(brickParallaxCubePath));
+    Model toy = Model(FileSystem::getPath(toyPath));
     //Model brickPlane = Model(FileSystem::getPath(brickPlanePath));
     //Model backpack = Model(FileSystem::getPath(backpackPath));
     // Model mars = Model(FileSystem::getPath(marsPath));
@@ -265,8 +267,10 @@ main()
         float slow_c = std::cos(elapsedTime * slow_speed);
 
         auto mainLight = dynamic_pointer_cast<PointLight>(lights[0]).get();
-        //mainLight->position = glm::vec3(slow_s * 2.0f, 0, slow_c * 2.5f);
-        mainLight->position = glm::vec3(.75f, 1.3f, 1.3f);
+        //mainLight->position = glm::vec3(slow_s * 3.0f, 0, slow_c * 3.5f);
+        mainLight->position = glm::vec3(slow_s * 3.0f, 2.0f, 0.0f);
+        //mainLight->position = glm::vec3(slow_s * 0.75f, 1.3f, 1.3f);
+        //mainLight->position = glm::vec3(-.65f, .0f, 2.f);
 
         auto redLight = dynamic_pointer_cast<PointLight>(lights[1]).get();
         redLight->position = glm::vec3(0, fast_s * 1.0f, 1.15f);
@@ -340,7 +344,7 @@ main()
             }
             else
             {
-                brickCube.Draw(omniDepthPassThroughShader);
+                toy.Draw(omniDepthPassThroughShader);
             }
         }
 
@@ -396,16 +400,11 @@ main()
                 cube.Draw(cubeLitWithOmniShadowsNormalParallaxShader);
             }
             else
-            {
-                glEnable(GL_CULL_FACE);
-                glCullFace(GL_BACK);
-                
+            {                
                 cubeLitWithOmniShadowsNormalParallaxShader.setFloat(
                   "reverse_normals",
                   0.0f);
-                brickCube.Draw(cubeLitWithOmniShadowsNormalParallaxShader);
-
-                glDisable(GL_CULL_FACE);
+                toy.Draw(cubeLitWithOmniShadowsNormalParallaxShader);
             }
         }
 
@@ -537,47 +536,4 @@ framebuffer_size_callback(GLFWwindow* window, int width, int height)
     glViewport(0, 0, width, height);
     windowWidth = width;
     windowHeight = height;
-}
-
-unsigned int
-loadCubemap(vector<string> faces_filepath)
-{
-    stbi_set_flip_vertically_on_load(false);
-
-    unsigned int cubemapTextureID;
-    glGenTextures(1, &cubemapTextureID);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTextureID);
-
-    int width, height, nrChannels;
-    unsigned char* data;
-    for (unsigned int i = 0; i < faces_filepath.size(); i++)
-    {
-        data =
-          stbi_load(faces_filepath[i].c_str(), &width, &height, &nrChannels, 0);
-        if (!data)
-        {
-            stbi_image_free(data);
-            std::cout << "Cubemap tex failed to load at path: "
-                      << faces_filepath[i] << std::endl;
-            throw;
-        }
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
-                     0,
-                     GL_RGB,
-                     width,
-                     height,
-                     0,
-                     GL_RGB,
-                     GL_UNSIGNED_BYTE,
-                     data);
-    }
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-    stbi_set_flip_vertically_on_load(true);
-
-    return cubemapTextureID;
 }
