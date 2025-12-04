@@ -4,6 +4,8 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include <format>
+
 #include "Camera.h"
 #include "Model.h"
 #include "filesystem.h"
@@ -92,7 +94,12 @@ main()
     // gamma correction setup
     glEnable(GL_FRAMEBUFFER_SRGB);
 
+    std::cout << std::format(
+      "OpenGL Version: {}\n",
+      reinterpret_cast<const char*>(glGetString(GL_VERSION)));
+
     // START OF CODE
+    
     // SETTING UP MAIN TRANSFORM MATRICES BLOCK
     // glGenBuffers(1, &uboMatrixBlock);
     // glBindBuffer(GL_UNIFORM_BUFFER, uboMatrixBlock);
