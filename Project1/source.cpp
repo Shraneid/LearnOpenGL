@@ -4,6 +4,10 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
 #include <format>
 
 #include "Camera.h"
@@ -24,11 +28,10 @@ void
 mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void
 scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-unsigned int
-loadCubemap(vector<string> texture_faces);
 
 int windowWidth = 1920, windowHeight = 1080;
 
+bool mouseMovesCamera = true;
 Camera camera = Camera(glm::vec3(0.0f, 1.0f, 5.0f));
 int lastX, lastY;
 
@@ -62,8 +65,13 @@ main()
 
     string title = "gpu go brrr";
 
-    GLFWwindow* window =
-      glfwCreateWindow(windowWidth, windowHeight, title.c_str(), NULL, NULL);
+    float main_scale =
+      ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor());
+    GLFWwindow* window = glfwCreateWindow((int)(windowWidth * main_scale),
+                                          (int)(windowHeight * main_scale),
+                                          title.c_str(),
+                                          NULL,
+                                          NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -77,6 +85,25 @@ main()
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
+
+    const char* version = reinterpret_cast<const char*>(glGetString(GL_VERSION));
+    std::cout << std::format("OpenGL Version: {}\n", version);
+
+    // IMGUI SETUP
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    (void)io;
+
+    ImGui::StyleColorsLight();
+
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.ScaleAllSizes(main_scale);
+    style.FontScaleDpi = main_scale;
+
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330");
+
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
@@ -93,10 +120,6 @@ main()
 
     // gamma correction setup
     glEnable(GL_FRAMEBUFFER_SRGB);
-
-    std::cout << std::format(
-      "OpenGL Version: {}\n",
-      reinterpret_cast<const char*>(glGetString(GL_VERSION)));
 
     // START OF CODE
     
@@ -201,7 +224,7 @@ main()
                                    glm::vec3(1.0f, 0.0f, 0.0f), // specular
                                    1.0f,                        // constant
                                    0.7f,                        // linear
-                                   1.8f                        // quadratic
+                                   1.8f                         // quadratic
       );
 
     vector<std::shared_ptr<Light>> lights;
@@ -255,6 +278,13 @@ main()
 
     while (!glfwWindowShouldClose(window))
     {
+        // IMGUI RENDERING
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+        ImGui::ShowDemoWindow();
+
+
         processInput(window);
 
         // PHYSICS
@@ -443,12 +473,25 @@ main()
 
         updateWindowNameWithFPS(window, title);
 
+
+
+        // IMGUI
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+
         // finish up frame
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
+    glfwDestroyWindow(window);
     glfwTerminate();
+
     return 0;
 }
 
@@ -512,11 +555,22 @@ processInput(GLFWwindow* window)
     {
         camera.ProcessKeyboard(Camera_Movement::DOWN, deltaTime);
     }
+    if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS)
+    {
+        mouseMovesCamera = false;
+    }
+    if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_RELEASE)
+    {
+        mouseMovesCamera = true;
+    }
 }
 
 void
 mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
+    if (!mouseMovesCamera)
+        return;
+
     float xoffset = static_cast<float>(xpos) - lastX;
     float yoffset = lastY - static_cast<float>(ypos);
 
