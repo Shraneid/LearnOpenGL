@@ -51,6 +51,7 @@ uniform samplerCube omniShadowMap;
 uniform float far_plane;
 
 uniform float parallax_strength;
+uniform float parallax_max_layers;
 
 vec3 CalcPointLight(PointLight light, vec3 lightPos, vec3 fragPos, vec3 viewDir, vec2 texCoords);
 vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir);
@@ -93,7 +94,7 @@ void main()
 
 vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir){
 	const float minLayers = 8.0;
-	const float maxLayers = 32.0;
+	float maxLayers = parallax_max_layers;
 
 	float nbOfLayers = mix(minLayers, maxLayers, abs(dot(vec3(0,0,1), viewDir)));
 	float layerDepth = 1.0/nbOfLayers;

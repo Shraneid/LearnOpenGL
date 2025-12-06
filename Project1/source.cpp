@@ -62,6 +62,9 @@ enum RenderMode
 RenderMode currentRenderMode = IMGUI;
 int renderModeCooldown = 0;
 
+int parallax_max_layers = 16;
+float parallax_strength = 0.1f;
+
 int
 main()
 {
@@ -224,8 +227,8 @@ main()
                                    glm::vec3(0.5f),             // diffuse
                                    glm::vec3(1.0f),             // specular
                                    1.0f,                        // constant
-                                   0.022f,                      // linear
-                                   0.0019f                      // quadratic
+                                   0.07f,                      // linear
+                                   0.017f                       // quadratic
       );
 
     auto p2 =
@@ -421,12 +424,14 @@ main()
                                       1000.0f);
 
         cubeLitWithOmniShadowsNormalParallaxShader.use();
-        glActiveTexture(GL_TEXTURE0);
+        //glActiveTexture(GL_TEXTURE0);
         cubeLitWithOmniShadowsNormalParallaxShader.setInt("omniShadowMap", 0);
         cubeLitWithOmniShadowsNormalParallaxShader.setFloat("far_plane",
                                                             far_plane);
         cubeLitWithOmniShadowsNormalParallaxShader.setFloat("parallax_strength",
-                                                            0.1f);
+                                                            parallax_strength);
+        cubeLitWithOmniShadowsNormalParallaxShader.setFloat("parallax_max_layers",
+                                                            parallax_max_layers);
         for (int i = 0; i < posScaleRot.size(); i++)
         {
             auto vectors = posScaleRot[i];
@@ -626,5 +631,29 @@ framebuffer_size_callback(GLFWwindow* window, int width, int height)
 void
 createIMGUIui()
 {
-    ImGui::ShowDemoWindow();
+    static float f = 0.0f;
+    static int counter = 0;
+
+    ImGui::Begin("Global Parameters");
+
+    ImGui::SliderInt("parallax_max_layers",
+                       &parallax_max_layers,
+                       16.0f,
+                       4096.0f);
+
+    ImGui::SliderFloat("parallax_strength", &parallax_strength,
+                       0.1f,
+                       1.0f);
+
+    //ImGui::ColorEdit3(
+    //  "clear color",
+    //  (float*)&clear_color); // Edit 3 floats representing a color
+
+    if (ImGui::Button("Button")) // Buttons return true when clicked (most
+                                 // widgets return true when edited/activated)
+        counter++;
+    ImGui::SameLine();
+    ImGui::Text("counter = %d", counter);
+
+    ImGui::End();
 }
