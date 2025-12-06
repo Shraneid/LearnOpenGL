@@ -28,8 +28,6 @@ uniform mat4 model;
 
 uniform vec3 viewPos;
 
-uniform float reverse_normals; // 1.0 if we need to reverse, 0.0 otherwise
-
 
 out VS_OUT {
 	vec3 Debug;
@@ -43,11 +41,9 @@ out VS_OUT {
 
 void main()
 {
-	float reverse_normal_factor = -2.0 * (reverse_normals - 0.5);
-
 	vec3 T = vec3(normalize(model * vec4(Tangent, 0.0)));
 	vec3 B = vec3(normalize(model * vec4(Bitangent, 0.0)));
-	vec3 N = vec3(normalize(model * vec4(reverse_normal_factor * Normal, 0.0)));
+	vec3 N = vec3(normalize(model * vec4(Normal, 0.0)));
 
 	mat3 TBN = transpose(mat3(T, B, N)); // World to tangent space
 

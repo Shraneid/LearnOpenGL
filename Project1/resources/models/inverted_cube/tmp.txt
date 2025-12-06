@@ -1,0 +1,4 @@
+map_Kd brick_diffuse.jpg
+map_Ks brick_specular.png
+map_Kn brick_normal.jpg
+map_Bump brick_bump.jpg

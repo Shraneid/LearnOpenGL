@@ -19,6 +19,8 @@
 #include "Cube.h"
 
 void
+createIMGUIui();
+void
 processInput(GLFWwindow* window);
 void
 updateWindowNameWithFPS(GLFWwindow* window, string title);
@@ -31,7 +33,6 @@ scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
 int windowWidth = 1920, windowHeight = 1080;
 
-bool mouseMovesCamera = true;
 Camera camera = Camera(glm::vec3(0.0f, 1.0f, 5.0f));
 int lastX, lastY;
 
@@ -51,6 +52,15 @@ glm::mat4 model, view, projection;
 
 // uniform matrices setup
 unsigned int uboMatrixBlock;
+
+enum RenderMode
+{
+    IMGUI,
+    CLASSIC
+};
+
+RenderMode currentRenderMode = IMGUI;
+int renderModeCooldown = 0;
 
 int
 main()
@@ -86,8 +96,14 @@ main()
         return -1;
     }
 
-    const char* version = reinterpret_cast<const char*>(glGetString(GL_VERSION));
+    const char* version =
+      reinterpret_cast<const char*>(glGetString(GL_VERSION));
     std::cout << std::format("OpenGL Version: {}\n", version);
+
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+    glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetScrollCallback(window, scroll_callback);
 
     // IMGUI SETUP
     IMGUI_CHECKVERSION();
@@ -104,12 +120,6 @@ main()
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
 
-
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
-    glfwSetCursorPosCallback(window, mouse_callback);
-    glfwSetScrollCallback(window, scroll_callback);
-
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_STENCIL_TEST);
     glEnable(GL_BLEND);
@@ -122,7 +132,7 @@ main()
     glEnable(GL_FRAMEBUFFER_SRGB);
 
     // START OF CODE
-    
+
     // SETTING UP MAIN TRANSFORM MATRICES BLOCK
     // glGenBuffers(1, &uboMatrixBlock);
     // glBindBuffer(GL_UNIFORM_BUFFER, uboMatrixBlock);
@@ -148,35 +158,37 @@ main()
       "VertexShaderModelLitOmniShadowsNormalMapParallaxMap.glsl",
       "FragmentShaderModelLitOmniShadowsNormalMapParallaxMap.glsl");
 
-    string cubePath = "resources/models/textured_cube/cube.obj";
+    string cubePath = "resources/models/textured_cube/walls.obj";
     string brickCubePath = "resources/models/brick_cube/brick.obj";
-    string brickParallaxCubePath = "resources/models/displaced_brick_cube/brick.obj";
-    string toyPath = "resources/models/toy/Untitled.obj";
+    string brickParallaxCubePath =
+      "resources/models/displaced_brick_cube/brick.obj";
     string brickPlanePath = "resources/models/brick_plane/brick_plane.obj";
     string backpackPath = "resources/models/backpack/backpack.obj";
     string marsPath = "resources/models/planet/planet.obj";
     string rockPath = "resources/models/rock/rock.obj";
+    string toyPath = "resources/models/toy/Untitled.obj";
+    string invertedCubePath = "resources/models/inverted_cube/Untitled.obj";
 
-    Model cube = Model(FileSystem::getPath(cubePath));
-    //Model brickCube = Model(FileSystem::getPath(brickCubePath));
-    //Model brickCube = Model(FileSystem::getPath(brickParallaxCubePath));
+    Model walls = Model(FileSystem::getPath(invertedCubePath));
+    // Model brickCube = Model(FileSystem::getPath(brickCubePath));
+    // Model brickCube = Model(FileSystem::getPath(brickParallaxCubePath));
     Model toy = Model(FileSystem::getPath(toyPath));
-    //Model brickPlane = Model(FileSystem::getPath(brickPlanePath));
-    //Model backpack = Model(FileSystem::getPath(backpackPath));
-    // Model mars = Model(FileSystem::getPath(marsPath));
-    // Model rock = Model(FileSystem::getPath(rockPath));
+    // Model brickPlane = Model(FileSystem::getPath(brickPlanePath));
+    // Model backpack = Model(FileSystem::getPath(backpackPath));
+    //  Model mars = Model(FileSystem::getPath(marsPath));
+    //  Model rock = Model(FileSystem::getPath(rockPath));
 
     // light cube
     vector<glm::vec3> lightCube = { glm::vec3(0, 0, 0),
-                                     glm::vec3(0.1),
-                                     glm::vec3(1),
-                                     glm::vec3(0) };
+                                    glm::vec3(0.1),
+                                    glm::vec3(1),
+                                    glm::vec3(0) };
 
     // light cube
     vector<glm::vec3> redLightCube = { glm::vec3(0, 0, 0),
-                                     glm::vec3(0.1),
-                                     glm::vec3(1),
-                                     glm::vec3(0) };
+                                       glm::vec3(0.1),
+                                       glm::vec3(1),
+                                       glm::vec3(0) };
 
     float floorSize = 10.0f;
     vector<vector<glm::vec3>> posScaleRot = {
@@ -186,7 +198,6 @@ main()
           glm::vec3(1),
           glm::vec3(0) },
 
-          
         { glm::vec3(0.0f, 0.0f, 0.0), // pos
           glm::vec3(1.0),             // scale
           glm::vec3(1, 1, 1),         // rotation axis
@@ -213,8 +224,8 @@ main()
                                    glm::vec3(0.5f),             // diffuse
                                    glm::vec3(1.0f),             // specular
                                    1.0f,                        // constant
-                                   0.22f,                       // linear
-                                   0.20f                        // quadratic
+                                   0.022f,                      // linear
+                                   0.0019f                      // quadratic
       );
 
     auto p2 =
@@ -278,12 +289,21 @@ main()
 
     while (!glfwWindowShouldClose(window))
     {
-        // IMGUI RENDERING
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-        ImGui::ShowDemoWindow();
+        glfwPollEvents();
 
+        if (currentRenderMode == IMGUI)
+        {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
+            ImGui_ImplOpenGL3_NewFrame();
+            ImGui_ImplGlfw_NewFrame();
+            ImGui::NewFrame();
+            createIMGUIui();
+        }
+        else
+        {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+        }
 
         processInput(window);
 
@@ -304,10 +324,10 @@ main()
         float slow_c = std::cos(elapsedTime * slow_speed);
 
         auto mainLight = dynamic_pointer_cast<PointLight>(lights[0]).get();
-        //mainLight->position = glm::vec3(slow_s * 3.0f, 0, slow_c * 3.5f);
+        // mainLight->position = glm::vec3(slow_s * 3.0f, 0, slow_c * 3.5f);
         mainLight->position = glm::vec3(slow_s * 3.0f, 2.0f, 0.0f);
-        //mainLight->position = glm::vec3(slow_s * 0.75f, 1.3f, 1.3f);
-        //mainLight->position = glm::vec3(-.65f, .0f, 2.f);
+        // mainLight->position = glm::vec3(slow_s * 0.75f, 1.3f, 1.3f);
+        // mainLight->position = glm::vec3(-.65f, .0f, 2.f);
 
         auto redLight = dynamic_pointer_cast<PointLight>(lights[1]).get();
         redLight->position = glm::vec3(0, fast_s * 1.0f, 1.15f);
@@ -377,7 +397,7 @@ main()
 
             if (i == 0)
             {
-                cube.Draw(omniDepthPassThroughShader);
+                walls.Draw(omniDepthPassThroughShader);
             }
             else
             {
@@ -404,9 +424,9 @@ main()
         glActiveTexture(GL_TEXTURE0);
         cubeLitWithOmniShadowsNormalParallaxShader.setInt("omniShadowMap", 0);
         cubeLitWithOmniShadowsNormalParallaxShader.setFloat("far_plane",
-                                                          far_plane);
+                                                            far_plane);
         cubeLitWithOmniShadowsNormalParallaxShader.setFloat("parallax_strength",
-                                                          0.1f);
+                                                            0.1f);
         for (int i = 0; i < posScaleRot.size(); i++)
         {
             auto vectors = posScaleRot[i];
@@ -425,22 +445,16 @@ main()
             cubeLitWithOmniShadowsNormalParallaxShader.setMat4("model", model);
             cubeLitWithOmniShadowsNormalParallaxShader.setMat4("view", view);
             cubeLitWithOmniShadowsNormalParallaxShader.setMat4("projection",
-                                                             projection);
+                                                               projection);
             cubeLitWithOmniShadowsNormalParallaxShader.setVec3("viewPos",
-                                                             camera.Position);
+                                                               camera.Position);
 
             if (i == 0)
             {
-                cubeLitWithOmniShadowsNormalParallaxShader.setFloat(
-                  "reverse_normals",
-                  1.0f);
-                cube.Draw(cubeLitWithOmniShadowsNormalParallaxShader);
+                walls.Draw(cubeLitWithOmniShadowsNormalParallaxShader);
             }
             else
-            {                
-                cubeLitWithOmniShadowsNormalParallaxShader.setFloat(
-                  "reverse_normals",
-                  0.0f);
+            {
                 toy.Draw(cubeLitWithOmniShadowsNormalParallaxShader);
             }
         }
@@ -456,7 +470,7 @@ main()
         lightSourceShader.setMat4("view", view);
         lightSourceShader.setMat4("projection", projection);
         lightSourceShader.setVec3("lightColor", glm::vec3(1.0f));
-        cube.Draw(lightSourceShader);
+        walls.Draw(lightSourceShader);
 
         model = glm::mat4(1.0f);
         model = glm::translate(model, redLightCube[0]);
@@ -467,22 +481,20 @@ main()
         lightSourceShader.setMat4("view", view);
         lightSourceShader.setMat4("projection", projection);
         lightSourceShader.setVec3("lightColor", glm::vec3(1.0f, 0.0f, 0.0f));
-        cube.Draw(lightSourceShader);
+        walls.Draw(lightSourceShader);
 
         skybox.Draw(projection, view);
 
         updateWindowNameWithFPS(window, title);
 
-
-
-        // IMGUI
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
+        if (currentRenderMode == IMGUI)
+        {
+            ImGui::Render();
+            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        }
 
         // finish up frame
         glfwSwapBuffers(window);
-        glfwPollEvents();
     }
 
     ImGui_ImplOpenGL3_Shutdown();
@@ -555,20 +567,29 @@ processInput(GLFWwindow* window)
     {
         camera.ProcessKeyboard(Camera_Movement::DOWN, deltaTime);
     }
-    if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS)
+
+    // RENDER MODE HANDLING
+    if (renderModeCooldown > 0)
+        renderModeCooldown -= 1;
+    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS && renderModeCooldown == 0)
     {
-        mouseMovesCamera = false;
-    }
-    if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_RELEASE)
-    {
-        mouseMovesCamera = true;
+        if (currentRenderMode == IMGUI)
+        {
+            currentRenderMode = CLASSIC;
+            renderModeCooldown = 60;
+        }
+        else
+        {
+            currentRenderMode = IMGUI;
+            renderModeCooldown = 60;
+        }
     }
 }
 
 void
 mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
-    if (!mouseMovesCamera)
+    if (currentRenderMode == IMGUI)
         return;
 
     float xoffset = static_cast<float>(xpos) - lastX;
@@ -588,6 +609,9 @@ mouse_callback(GLFWwindow* window, double xpos, double ypos)
 void
 scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
+    if (currentRenderMode == IMGUI)
+        return;
+
     camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }
 
@@ -597,4 +621,10 @@ framebuffer_size_callback(GLFWwindow* window, int width, int height)
     glViewport(0, 0, width, height);
     windowWidth = width;
     windowHeight = height;
+}
+
+void
+createIMGUIui()
+{
+    ImGui::ShowDemoWindow();
 }
