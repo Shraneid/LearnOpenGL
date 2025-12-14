@@ -317,7 +317,7 @@ main()
 
         // RENDER SHADOW MAP
         float aspect = (float)SHADOW_WIDTH / (float)SHADOW_HEIGHT;
-        float near_plane = 1.0f, far_plane = 25.0f;
+        float near_plane = .01f, far_plane = 25.0f;
         glm::mat4 shadowProj =
           glm::perspective(glm::radians(90.0f), aspect, near_plane, far_plane);
 
