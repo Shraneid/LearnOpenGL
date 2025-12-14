@@ -62,8 +62,12 @@ enum RenderMode
 RenderMode currentRenderMode = IMGUI;
 int renderModeCooldown = 0;
 
+vector<std::shared_ptr<Light>> lights;
+
 int parallax_max_layers = 16;
 float parallax_strength = 0.1f;
+int parallax_self_shadow_max_layers = 16;
+bool parallax_self_shadow = true;
 
 int
 main()
@@ -173,13 +177,7 @@ main()
     string invertedCubePath = "resources/models/inverted_cube/Untitled.obj";
 
     Model walls = Model(FileSystem::getPath(invertedCubePath));
-    // Model brickCube = Model(FileSystem::getPath(brickCubePath));
-    // Model brickCube = Model(FileSystem::getPath(brickParallaxCubePath));
     Model toy = Model(FileSystem::getPath(toyPath));
-    // Model brickPlane = Model(FileSystem::getPath(brickPlanePath));
-    // Model backpack = Model(FileSystem::getPath(backpackPath));
-    //  Model mars = Model(FileSystem::getPath(marsPath));
-    //  Model rock = Model(FileSystem::getPath(rockPath));
 
     // light cube
     vector<glm::vec3> lightCube = { glm::vec3(0, 0, 0),
@@ -205,29 +203,15 @@ main()
           glm::vec3(1.0),             // scale
           glm::vec3(1, 1, 1),         // rotation axis
           glm::vec3(0) },             // rotation angle
-
-        // objects
-        //{ glm::vec3(0.0f, 3.5f, 0.0),  // pos
-        //  glm::vec3(0.5),              // scale
-        //  glm::vec3(1, 1, -1),         // rotation axis
-        //  glm::vec3(0) },              // rotation angle
-        //{ glm::vec3(3.0f, 0.5f, 1.0),  // pos
-        //  glm::vec3(0.5),              // scale
-        //  glm::vec3(1, 0.3, -0.2),     // rotation axis
-        //  glm::vec3(0) },              // rotation angle
-        //{ glm::vec3(-1.0f, 1.0f, 4.0), // pos
-        //  glm::vec3(0.25),             // scale
-        //  glm::vec3(1.0, 0.0, 1.0),    // rotation axis
-        //  glm::vec3(60) },             // rotation angle
     };
 
     auto p1 =
-      std::make_shared<PointLight>(glm::vec3(1.0f, 0.0f, 2.0f), // position
+      std::make_shared<PointLight>(glm::vec3(1.0f, 1.5f, 0.0f), // position
                                    glm::vec3(0.2f),             // ambient
                                    glm::vec3(0.5f),             // diffuse
                                    glm::vec3(1.0f),             // specular
                                    1.0f,                        // constant
-                                   0.07f,                      // linear
+                                   0.07f,                       // linear
                                    0.017f                       // quadratic
       );
 
@@ -241,7 +225,6 @@ main()
                                    1.8f                         // quadratic
       );
 
-    vector<std::shared_ptr<Light>> lights;
     lights.push_back(p1);
     lights.push_back(p2);
 
@@ -327,13 +310,9 @@ main()
         float slow_c = std::cos(elapsedTime * slow_speed);
 
         auto mainLight = dynamic_pointer_cast<PointLight>(lights[0]).get();
-        // mainLight->position = glm::vec3(slow_s * 3.0f, 0, slow_c * 3.5f);
-        mainLight->position = glm::vec3(slow_s * 3.0f, 2.0f, 0.0f);
-        // mainLight->position = glm::vec3(slow_s * 0.75f, 1.3f, 1.3f);
-        // mainLight->position = glm::vec3(-.65f, .0f, 2.f);
 
         auto redLight = dynamic_pointer_cast<PointLight>(lights[1]).get();
-        redLight->position = glm::vec3(0, fast_s * 1.0f, 1.15f);
+        redLight->position = glm::vec3(0, fast_s * .7f, 1.15f);
 
         lightCube[0] = mainLight->position;
         redLightCube[0] = redLight->position;
@@ -424,14 +403,25 @@ main()
                                       1000.0f);
 
         cubeLitWithOmniShadowsNormalParallaxShader.use();
-        //glActiveTexture(GL_TEXTURE0);
+        // glActiveTexture(GL_TEXTURE0);
         cubeLitWithOmniShadowsNormalParallaxShader.setInt("omniShadowMap", 0);
         cubeLitWithOmniShadowsNormalParallaxShader.setFloat("far_plane",
                                                             far_plane);
+
+        // parallax mapping
         cubeLitWithOmniShadowsNormalParallaxShader.setFloat("parallax_strength",
                                                             parallax_strength);
-        cubeLitWithOmniShadowsNormalParallaxShader.setFloat("parallax_max_layers",
-                                                            parallax_max_layers);
+        cubeLitWithOmniShadowsNormalParallaxShader.setFloat(
+          "parallax_max_layers",
+          parallax_max_layers);
+
+        // parallax self shadowing
+        cubeLitWithOmniShadowsNormalParallaxShader.setBool("parallax_self_shadow",
+                                                            parallax_self_shadow);
+        cubeLitWithOmniShadowsNormalParallaxShader.setFloat(
+          "parallax_self_shadow_max_layers",
+          parallax_self_shadow_max_layers);
+
         for (int i = 0; i < posScaleRot.size(); i++)
         {
             auto vectors = posScaleRot[i];
@@ -576,7 +566,8 @@ processInput(GLFWwindow* window)
     // RENDER MODE HANDLING
     if (renderModeCooldown > 0)
         renderModeCooldown -= 1;
-    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS && renderModeCooldown == 0)
+    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS &&
+        renderModeCooldown == 0)
     {
         if (currentRenderMode == IMGUI)
         {
@@ -636,21 +627,34 @@ createIMGUIui()
 
     ImGui::Begin("Global Parameters");
 
+    auto mainLight = dynamic_pointer_cast<PointLight>(lights[0]).get();
+    auto lightPos = mainLight->getPosition();
+    if (ImGui::DragFloat("lightPos.x", &lightPos.x, 0.02f))
+    {
+        mainLight->position = lightPos;
+    }
+    if (ImGui::DragFloat("lightPos.y", &lightPos.y, 0.02f))
+    {
+        mainLight->position = lightPos;
+    }
+    if (ImGui::DragFloat("lightPos.z", &lightPos.z, 0.02f))
+    {
+        mainLight->position = lightPos;
+    }
+
     ImGui::SliderInt("parallax_max_layers",
-                       &parallax_max_layers,
-                       16.0f,
-                       4096.0f);
+                     &parallax_max_layers,
+                     16.0f,
+                     4096.0f);
+    ImGui::SliderFloat("parallax_strength", &parallax_strength, 0.1f, 1.0f);
 
-    ImGui::SliderFloat("parallax_strength", &parallax_strength,
-                       0.1f,
-                       1.0f);
+    ImGui::Checkbox("parallax_self_shadows", &parallax_self_shadow);
+    ImGui::SliderInt("parallax_self_shadow_max_layers",
+                     &parallax_self_shadow_max_layers,
+                     16.0f,
+                     4096.0f);
 
-    //ImGui::ColorEdit3(
-    //  "clear color",
-    //  (float*)&clear_color); // Edit 3 floats representing a color
-
-    if (ImGui::Button("Button")) // Buttons return true when clicked (most
-                                 // widgets return true when edited/activated)
+    if (ImGui::Button("Button"))
         counter++;
     ImGui::SameLine();
     ImGui::Text("counter = %d", counter);
