@@ -73,8 +73,6 @@ int
 main()
 {
     // GLAD / GLFW3 SETUP
-    stbi_set_flip_vertically_on_load(true);
-
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -645,14 +643,14 @@ createIMGUIui()
     ImGui::SliderInt("parallax_max_layers",
                      &parallax_max_layers,
                      16.0f,
-                     4096.0f);
+                     256.0f);
     ImGui::SliderFloat("parallax_strength", &parallax_strength, 0.1f, 1.0f);
 
     ImGui::Checkbox("parallax_self_shadows", &parallax_self_shadow);
     ImGui::SliderInt("parallax_self_shadow_max_layers",
                      &parallax_self_shadow_max_layers,
                      16.0f,
-                     4096.0f);
+                     256.0f);
 
     if (ImGui::Button("Button"))
         counter++;

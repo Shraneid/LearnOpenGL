@@ -50,8 +50,6 @@ class Skybox
 
     unsigned int loadCubemap(std::vector<std::string> faces_filepath)
     {
-        stbi_set_flip_vertically_on_load(false);
-
         unsigned int cubemapTextureID;
         glGenTextures(1, &cubemapTextureID);
         glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTextureID);
@@ -93,8 +91,6 @@ class Skybox
         glTexParameteri(GL_TEXTURE_CUBE_MAP,
                         GL_TEXTURE_WRAP_R,
                         GL_CLAMP_TO_EDGE);
-
-        stbi_set_flip_vertically_on_load(true);
 
         return cubemapTextureID;
     }

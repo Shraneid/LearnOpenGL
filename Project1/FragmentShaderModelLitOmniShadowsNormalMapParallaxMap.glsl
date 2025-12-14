@@ -97,8 +97,6 @@ void main()
 
 
 vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir){
-	viewDir.y = -viewDir.y;
-
 	const float minLayers = 8.0;
 	float maxLayers = parallax_max_layers;
 
@@ -177,48 +175,53 @@ vec3 CalcPointLight(PointLight light, vec3 tangentLightPos, vec3 tangentFragPos,
 
 
 float ParallaxShadow(vec3 lightDir, vec2 texCoords){
-	float shadowMultiplier = 0;
+	float shadowMultiplier = 1;
 
 	const float minLayers = 8.0;
 	float maxLayers = parallax_max_layers;
 	
-	lightDir.y = -lightDir.y;
+	if (dot(vec3(0,0,1), lightDir) > 0)
+	{
+		shadowMultiplier = 0;
 
 	if (dot(vec3(0,0,1), lightDir) < 0){
 		return 1;
 	}
 
-	float numSamplesUnderSurface = 0;
-	float nbOfLayers = mix(maxLayers, minLayers, abs(dot(vec3(0,0,1), lightDir)));
+		float numSamplesUnderSurface = 0;
+		float nbOfLayers = mix(maxLayers, minLayers, abs(dot(vec3(0,0,1), lightDir)));
 	
-	float parallax_sample = texture(material.texture_parallax1, texCoords).r;
-	float currentHeight = parallax_sample;
+		float parallax_sample = texture(material.texture_parallax1, texCoords).r;
+		float currentHeight = parallax_sample;
 
-	float layerHeight = currentHeight / nbOfLayers;
-	vec2 texDelta = parallax_strength * lightDir.xy / lightDir.z / nbOfLayers;
+		float layerHeight = currentHeight / nbOfLayers;
+		vec2 texDelta = parallax_strength * lightDir.xy / lightDir.z / nbOfLayers;
 
-	int stepIndex = 1;
+		int stepIndex = 1;
 
-	while(currentHeight > 0){
+		while(currentHeight > 0){
 
-		if (parallax_sample < currentHeight){  // we are under the mesh so a shadow is cast
-			numSamplesUnderSurface += 1;
+			if (parallax_sample < currentHeight){  // we are under the mesh so a shadow is cast
+				numSamplesUnderSurface += 1;
 
-			float newShadowMultiplier = (currentHeight - parallax_sample) * (1.0 - stepIndex / nbOfLayers);
-			shadowMultiplier = max(shadowMultiplier, newShadowMultiplier);
-		}
+				float newShadowMultiplier = (currentHeight - parallax_sample) * (1.0 - stepIndex / nbOfLayers);
+				shadowMultiplier = max(shadowMultiplier, newShadowMultiplier);
+			}
 
-		texCoords += texDelta;
-		parallax_sample = texture(material.texture_parallax1, texCoords).r;
+			texCoords += texDelta;
+			parallax_sample = texture(material.texture_parallax1, texCoords).r;
 
-		stepIndex += 1;
-		currentHeight -= layerHeight;
+			stepIndex += 1;
+			currentHeight -= layerHeight;
 		
+		}
+		if (numSamplesUnderSurface == 0){
+			shadowMultiplier = 1;
+		} else {
+			shadowMultiplier = 1.0 - shadowMultiplier;
+		}
 	}
-	if (numSamplesUnderSurface == 0){
-		return 0;
-	}
-	return 1.0 - shadowMultiplier;
+	return shadowMultiplier;
 }
 
 

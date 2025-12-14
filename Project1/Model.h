@@ -32,7 +32,7 @@ class Model
         const aiScene* scene =
           importer.ReadFile(
               path, 
-              aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace
+              aiProcess_Triangulate | aiProcess_CalcTangentSpace
           );
 
         if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE ||
@@ -93,7 +93,8 @@ class Model
             vector.y = mesh->mBitangents[i].y;
             vector.z = mesh->mBitangents[i].z;
 
-            vertex.Bitangent = vector;
+            // change of handedness since assimp uses the opposite
+            vertex.Bitangent = -vector;
 
             if (mesh->mTextureCoords[0])
             {
