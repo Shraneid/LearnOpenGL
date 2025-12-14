@@ -64,9 +64,8 @@ int renderModeCooldown = 0;
 
 vector<std::shared_ptr<Light>> lights;
 
-int parallax_max_layers = 16;
+int parallax_max_layers = 64;
 float parallax_strength = 0.1f;
-int parallax_self_shadow_max_layers = 16;
 bool parallax_self_shadow = true;
 
 int
@@ -205,6 +204,7 @@ main()
 
     auto p1 =
       std::make_shared<PointLight>(glm::vec3(1.0f, 1.5f, 0.0f), // position
+                                   true,                        // casts_shadows
                                    glm::vec3(0.2f),             // ambient
                                    glm::vec3(0.5f),             // diffuse
                                    glm::vec3(1.0f),             // specular
@@ -215,6 +215,7 @@ main()
 
     auto p2 =
       std::make_shared<PointLight>(glm::vec3(1.0f, 0.0f, 2.0f), // position
+                                   false,                       // casts_shadows
                                    glm::vec3(0.2f, 0.0f, 0.0f), // ambient
                                    glm::vec3(0.5f, 0.0f, 0.0f), // diffuse
                                    glm::vec3(1.0f, 0.0f, 0.0f), // specular
@@ -310,7 +311,7 @@ main()
         auto mainLight = dynamic_pointer_cast<PointLight>(lights[0]).get();
 
         auto redLight = dynamic_pointer_cast<PointLight>(lights[1]).get();
-        redLight->position = glm::vec3(0, fast_s * .7f, 1.15f);
+        redLight->position = glm::vec3(0, fast_s * .7f, 1.2f);
 
         lightCube[0] = mainLight->position;
         redLightCube[0] = redLight->position;
@@ -416,9 +417,6 @@ main()
         // parallax self shadowing
         cubeLitWithOmniShadowsNormalParallaxShader.setBool("parallax_self_shadow",
                                                             parallax_self_shadow);
-        cubeLitWithOmniShadowsNormalParallaxShader.setFloat(
-          "parallax_self_shadow_max_layers",
-          parallax_self_shadow_max_layers);
 
         for (int i = 0; i < posScaleRot.size(); i++)
         {
@@ -628,34 +626,24 @@ createIMGUIui()
     auto mainLight = dynamic_pointer_cast<PointLight>(lights[0]).get();
     auto lightPos = mainLight->getPosition();
     if (ImGui::DragFloat("lightPos.x", &lightPos.x, 0.02f))
-    {
         mainLight->position = lightPos;
-    }
     if (ImGui::DragFloat("lightPos.y", &lightPos.y, 0.02f))
-    {
         mainLight->position = lightPos;
-    }
     if (ImGui::DragFloat("lightPos.z", &lightPos.z, 0.02f))
-    {
         mainLight->position = lightPos;
-    }
 
     ImGui::SliderInt("parallax_max_layers",
                      &parallax_max_layers,
-                     16.0f,
+                     8.0f,
                      256.0f);
-    ImGui::SliderFloat("parallax_strength", &parallax_strength, 0.1f, 1.0f);
+    ImGui::SliderFloat("parallax_strength", &parallax_strength, 0.f, 1.0f);
 
     ImGui::Checkbox("parallax_self_shadows", &parallax_self_shadow);
-    ImGui::SliderInt("parallax_self_shadow_max_layers",
-                     &parallax_self_shadow_max_layers,
-                     16.0f,
-                     256.0f);
 
-    if (ImGui::Button("Button"))
-        counter++;
-    ImGui::SameLine();
-    ImGui::Text("counter = %d", counter);
+    //if (ImGui::Button("Button"))
+    //    counter++;
+    //ImGui::SameLine();
+    //ImGui::Text("counter = %d", counter);
 
     ImGui::End();
 }

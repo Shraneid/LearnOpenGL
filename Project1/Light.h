@@ -69,6 +69,7 @@ class PointLight : public Light
 {
   public:
     PointLight(glm::vec3 pos,
+               bool cast,
                glm::vec3 amb,
                glm::vec3 diff,
                glm::vec3 spec,
@@ -77,6 +78,7 @@ class PointLight : public Light
                float quad)
       : Light()
       , position(pos)
+      , casts_shadows(cast)
       , ambient(amb)
       , diffuse(diff)
       , specular(spec)
@@ -96,6 +98,7 @@ class PointLight : public Light
         const string lightGLID =
           "pointLights[" + std::to_string(GetLightId()) + "]";
 
+        shader.setBool(lightGLID + ".casts_shadows", casts_shadows);
         shader.setVec3(lightGLID + ".ambient", ambient);
         shader.setVec3(lightGLID + ".position", position);
         shader.setVec3(lightGLID + ".diffuse", diffuse);
@@ -112,6 +115,8 @@ class PointLight : public Light
 
   private:
     void setId() { id = pointLightsCounter++; }
+
+    bool casts_shadows;
 
     glm::vec3 ambient;
     glm::vec3 diffuse;

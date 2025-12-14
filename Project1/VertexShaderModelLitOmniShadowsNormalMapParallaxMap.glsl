@@ -10,6 +10,7 @@ layout (location = 4) in vec2 texCoords;
 
 struct PointLight {
 	vec3 position;
+	bool casts_shadows;
 
 	vec3 ambient;
 	vec3 diffuse;

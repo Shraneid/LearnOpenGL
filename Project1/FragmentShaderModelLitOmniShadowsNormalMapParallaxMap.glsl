@@ -25,6 +25,7 @@ uniform int NUMBER_OF_DIRECTIONAL_LIGHTS;
 
 struct PointLight {
 	vec3 position;
+	bool casts_shadows;
 
 	vec3 ambient;
 	vec3 diffuse;
@@ -54,7 +55,6 @@ uniform float parallax_strength;
 uniform float parallax_max_layers;
 
 uniform bool parallax_self_shadow;
-uniform float parallax_self_shadow_max_layers;
 
 vec3 CalcPointLight(PointLight light, vec3 lightPos, vec3 tangentFragPos, vec3 tangentViewDir, vec2 texCoords);
 vec2 ParallaxMapping(vec2 texCoords, vec3 tangentViewDir);
@@ -164,9 +164,10 @@ vec3 CalcPointLight(PointLight light, vec3 tangentLightPos, vec3 tangentFragPos,
 	specular *= attenuation;
 
 	float parallaxShadow = parallax_self_shadow ? ParallaxShadow(lightDir, texCoords) : 0.0;
-	float pointLightShadow = OmniShadowCalculation(fs_in.FragPos, light.position);
+	float pointLightShadow = light.casts_shadows ? OmniShadowCalculation(fs_in.FragPos, light.position) : 0.0;
 	
-	float shadow = max(pointLightShadow, parallaxShadow);
+	float shadow = pointLightShadow;
+//	float shadow = max(pointLightShadow, parallaxShadow);
 
 	vec3 litColor =  ambient + (1.0 - shadow) * (diffuse + specular);
 
@@ -180,13 +181,12 @@ float ParallaxShadow(vec3 lightDir, vec2 texCoords){
 	const float minLayers = 8.0;
 	float maxLayers = parallax_max_layers;
 	
-	if (dot(vec3(0,0,1), lightDir) > 0)
+	return 0;
+
+	if (true)
+//	if (dot(vec3(0,0,1), lightDir) > 0)
 	{
 		shadowMultiplier = 0;
-
-	if (dot(vec3(0,0,1), lightDir) < 0){
-		return 1;
-	}
 
 		float numSamplesUnderSurface = 0;
 		float nbOfLayers = mix(maxLayers, minLayers, abs(dot(vec3(0,0,1), lightDir)));
@@ -200,7 +200,6 @@ float ParallaxShadow(vec3 lightDir, vec2 texCoords){
 		int stepIndex = 1;
 
 		while(currentHeight > 0){
-
 			if (parallax_sample < currentHeight){  // we are under the mesh so a shadow is cast
 				numSamplesUnderSurface += 1;
 
@@ -213,8 +212,8 @@ float ParallaxShadow(vec3 lightDir, vec2 texCoords){
 
 			stepIndex += 1;
 			currentHeight -= layerHeight;
-		
 		}
+
 		if (numSamplesUnderSurface == 0){
 			shadowMultiplier = 1;
 		} else {
@@ -233,12 +232,12 @@ float OmniShadowCalculation(vec3 worldFragPos, vec3 worldLightPos){
 	float viewDistance = length(viewPos - worldFragPos);
 	float diskRadius = (1.0 + (viewDistance / far_plane)) / 50.0;
 	
-	vec3 fragToLight = fs_in.FragPos - worldLightPos;
-	float currentDepth = length(fragToLight);
+	vec3 lightToFrag = fs_in.FragPos - worldLightPos;
+	float currentDepth = length(lightToFrag);
 	
 	for (int i = 0; i < samples; ++i)
 	{
-		float closestDepth = texture(omniShadowMap, fragToLight + sampleOffsetDirections[i] * diskRadius).r;
+		float closestDepth = texture(omniShadowMap, lightToFrag + sampleOffsetDirections[i] * diskRadius).r;
 		closestDepth *= far_plane;
 				
 		if (currentDepth-bias > closestDepth)
