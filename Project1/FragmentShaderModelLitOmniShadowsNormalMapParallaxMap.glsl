@@ -93,6 +93,8 @@ void main()
 
 
 vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir){
+	viewDir.y = -viewDir.y;
+
 	const float minLayers = 8.0;
 	float maxLayers = parallax_max_layers;
 
@@ -101,10 +103,8 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir){
 	float currentLayerDepth = 0.0;
 
 	vec2 P = viewDir.xy / viewDir.z * parallax_strength;
-	P.y = -P.y;
 	vec2 deltaTexCoords = P / nbOfLayers;
 
-	vec2 previousTexCoords = texCoords;
 	vec2 currentTexCoords = texCoords;
 	float parallax_sample = texture(material.texture_parallax1, texCoords).r;
 	float currentDepthMapValue = parallax_sample;
@@ -112,14 +112,22 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir){
 	while (currentLayerDepth < currentDepthMapValue){
 		currentLayerDepth += layerDepth;
 
-		previousTexCoords = currentTexCoords;
 		currentTexCoords -= deltaTexCoords;
 
 		parallax_sample = texture(material.texture_parallax1, currentTexCoords).r;
 		currentDepthMapValue = parallax_sample;
 	}
 
-	return currentTexCoords;
+	vec2 previousTexCoords = currentTexCoords + deltaTexCoords;
+
+	float afterHitDepth = currentDepthMapValue - currentLayerDepth;
+	float beforeHitDepth = texture(material.texture_parallax1, previousTexCoords).r - currentLayerDepth + layerDepth;
+
+	float weight = afterHitDepth / (afterHitDepth - beforeHitDepth);
+
+	vec2 finalSampleTexCoords = previousTexCoords * weight + currentTexCoords * (1.0 - weight);
+
+	return finalSampleTexCoords;
 }
 
 
