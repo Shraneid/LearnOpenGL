@@ -62,11 +62,15 @@ enum RenderMode
 RenderMode currentRenderMode = IMGUI;
 int renderModeCooldown = 0;
 
-vector<std::shared_ptr<Light>> lights;
+bool wireframeMode = false;
 
 int parallax_max_layers = 64;
 float parallax_strength = 0.1f;
+
 bool parallax_self_shadow = true;
+float parallax_self_shadow_exponent = 1.0;
+
+vector<std::shared_ptr<Light>> lights;
 
 int
 main()
@@ -77,6 +81,8 @@ main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+    glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
+
     string title = "gpu go brrr";
 
     float main_scale =
@@ -86,6 +92,7 @@ main()
                                           title.c_str(),
                                           NULL,
                                           NULL);
+
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -108,6 +115,10 @@ main()
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetScrollCallback(window, scroll_callback);
+
+    glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
+    glViewport(0, 0, windowWidth, windowHeight);
+
 
     // IMGUI SETUP
     IMGUI_CHECKVERSION();
@@ -205,7 +216,7 @@ main()
     auto p1 =
       std::make_shared<PointLight>(glm::vec3(1.0f, 1.5f, 0.0f), // position
                                    true,                        // casts_shadows
-                                   glm::vec3(0.2f),             // ambient
+                                   glm::vec3(0.02f),            // ambient
                                    glm::vec3(0.5f),             // diffuse
                                    glm::vec3(1.0f),             // specular
                                    1.0f,                        // constant
@@ -216,7 +227,7 @@ main()
     auto p2 =
       std::make_shared<PointLight>(glm::vec3(1.0f, 0.0f, 2.0f), // position
                                    false,                       // casts_shadows
-                                   glm::vec3(0.2f, 0.0f, 0.0f), // ambient
+                                   glm::vec3(0.01f, 0.0f, 0.0f),// ambient
                                    glm::vec3(0.5f, 0.0f, 0.0f), // diffuse
                                    glm::vec3(1.0f, 0.0f, 0.0f), // specular
                                    1.0f,                        // constant
@@ -402,6 +413,8 @@ main()
                                       1000.0f);
 
         cubeLitWithOmniShadowsNormalParallaxShader.use();
+        cubeLitWithOmniShadowsNormalParallaxShader.setBool("wireframeMode", wireframeMode);
+
         // glActiveTexture(GL_TEXTURE0);
         cubeLitWithOmniShadowsNormalParallaxShader.setInt("omniShadowMap", 0);
         cubeLitWithOmniShadowsNormalParallaxShader.setFloat("far_plane",
@@ -415,8 +428,12 @@ main()
           parallax_max_layers);
 
         // parallax self shadowing
-        cubeLitWithOmniShadowsNormalParallaxShader.setBool("parallax_self_shadow",
-                                                            parallax_self_shadow);
+        cubeLitWithOmniShadowsNormalParallaxShader.setBool(
+          "parallax_self_shadow",
+          parallax_self_shadow);
+        cubeLitWithOmniShadowsNormalParallaxShader.setFloat(
+          "parallax_self_shadow_exponent",
+          parallax_self_shadow_exponent);
 
         for (int i = 0; i < posScaleRot.size(); i++)
         {
@@ -623,6 +640,20 @@ createIMGUIui()
 
     ImGui::Begin("Global Parameters");
 
+    
+    if (ImGui::Checkbox("Wireframe", &wireframeMode))
+    {
+        std::cout << "wireframe mode : " << std::to_string(wireframeMode) << std::endl;
+        if (wireframeMode)
+        {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        }
+        else
+        {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        }
+    }
+
     auto mainLight = dynamic_pointer_cast<PointLight>(lights[0]).get();
     auto lightPos = mainLight->getPosition();
     if (ImGui::DragFloat("lightPos.x", &lightPos.x, 0.02f))
@@ -632,18 +663,19 @@ createIMGUIui()
     if (ImGui::DragFloat("lightPos.z", &lightPos.z, 0.02f))
         mainLight->position = lightPos;
 
-    ImGui::SliderInt("parallax_max_layers",
-                     &parallax_max_layers,
-                     8.0f,
-                     256.0f);
+    ImGui::SliderInt("parallax_max_layers", &parallax_max_layers, 8.0f, 256.0f);
     ImGui::SliderFloat("parallax_strength", &parallax_strength, 0.f, 1.0f);
 
     ImGui::Checkbox("parallax_self_shadows", &parallax_self_shadow);
+    ImGui::SliderFloat("parallax_self_shadow_exponent",
+                     &parallax_self_shadow_exponent,
+                     1.0f,
+                     2.5f);
 
-    //if (ImGui::Button("Button"))
-    //    counter++;
-    //ImGui::SameLine();
-    //ImGui::Text("counter = %d", counter);
+    // if (ImGui::Button("Button"))
+    //     counter++;
+    // ImGui::SameLine();
+    // ImGui::Text("counter = %d", counter);
 
     ImGui::End();
 }

@@ -46,6 +46,8 @@ struct Material {
 };
 uniform Material material;
 
+uniform bool wireframeMode;
+
 uniform vec3 viewPos;
 uniform sampler2D shadowMap;
 uniform samplerCube omniShadowMap;
@@ -55,6 +57,7 @@ uniform float parallax_strength;
 uniform float parallax_max_layers;
 
 uniform bool parallax_self_shadow;
+uniform float parallax_self_shadow_exponent;
 
 vec3 CalcPointLight(PointLight light, vec3 lightPos, vec3 tangentFragPos, vec3 tangentViewDir, vec2 texCoords);
 vec2 ParallaxMapping(vec2 texCoords, vec3 tangentViewDir);
@@ -77,7 +80,8 @@ void main()
 	vec2 texCoords = ParallaxMapping(fs_in.TexCoords, tangentViewDir);
 
 	if (texCoords.x > 1.0 || texCoords.x < 0.0 || texCoords.y > 1.0 || texCoords.y < 0.0){
-		discard;
+		if (!wireframeMode)
+			discard;
 	}
 
 	vec3 result = vec3(0.0);
@@ -151,7 +155,7 @@ vec3 CalcPointLight(PointLight light, vec3 tangentLightPos, vec3 tangentFragPos,
 	if (diff < 0.001)
 		spec = 0;
 
-	vec3 ambient = light.ambient * 0.5 * diffuse_sample;
+	vec3 ambient = light.ambient * diffuse_sample;
 	vec3 diffuse = light.diffuse * diff * diffuse_sample;
 	vec3 specular = light.specular * spec * specular_sample;
 
@@ -163,13 +167,11 @@ vec3 CalcPointLight(PointLight light, vec3 tangentLightPos, vec3 tangentFragPos,
 	diffuse *= attenuation;
 	specular *= attenuation;
 
-	float parallaxShadow = parallax_self_shadow ? ParallaxShadow(lightDir, texCoords) : 0.0;
 	float pointLightShadow = light.casts_shadows ? OmniShadowCalculation(fs_in.FragPos, light.position) : 0.0;
 	
-	float shadow = pointLightShadow;
-//	float shadow = max(pointLightShadow, parallaxShadow);
+	float parallaxShadowMultiplier = parallax_self_shadow ? ParallaxShadow(lightDir, texCoords) : 1.0;
 
-	vec3 litColor =  ambient + (1.0 - shadow) * (diffuse + specular);
+	vec3 litColor =  ambient + (1.0 - pointLightShadow) * parallaxShadowMultiplier * (diffuse + specular);
 
 	return litColor;
 }
@@ -181,46 +183,34 @@ float ParallaxShadow(vec3 lightDir, vec2 texCoords){
 	const float minLayers = 8.0;
 	float maxLayers = parallax_max_layers;
 	
-	return 0;
+	if (dot(vec3(0,0,1), lightDir) < 0)
+		return 0.0;
+		
+	shadowMultiplier = 0;
 
-	if (true)
-//	if (dot(vec3(0,0,1), lightDir) > 0)
-	{
-		shadowMultiplier = 0;
-
-		float numSamplesUnderSurface = 0;
-		float nbOfLayers = mix(maxLayers, minLayers, abs(dot(vec3(0,0,1), lightDir)));
+	float numSamplesUnderSurface = 0;
+	float nbOfLayers = mix(maxLayers, minLayers, abs(dot(vec3(0,0,1), lightDir)));
 	
-		float parallax_sample = texture(material.texture_parallax1, texCoords).r;
-		float currentHeight = parallax_sample;
+	float parallax_sample = texture(material.texture_parallax1, texCoords).r;
+	float currentHeight = parallax_sample;
 
-		float layerHeight = currentHeight / nbOfLayers;
-		vec2 texDelta = parallax_strength * lightDir.xy / lightDir.z / nbOfLayers;
+	float layerHeight = currentHeight / nbOfLayers;
+	vec2 texDelta = parallax_strength * lightDir.xy / lightDir.z / nbOfLayers;
 
-		int stepIndex = 1;
+	int stepIndex = 1;
 
-		while(currentHeight > 0){
-			if (parallax_sample < currentHeight){  // we are under the mesh so a shadow is cast
-				numSamplesUnderSurface += 1;
+	while(currentHeight > 0){
+		if (parallax_sample < currentHeight)  // we are under the mesh so a shadow is cast
+			numSamplesUnderSurface += 1;
 
-				float newShadowMultiplier = (currentHeight - parallax_sample) * (1.0 - stepIndex / nbOfLayers);
-				shadowMultiplier = max(shadowMultiplier, newShadowMultiplier);
-			}
+		texCoords += texDelta;
+		parallax_sample = texture(material.texture_parallax1, texCoords).r;
 
-			texCoords += texDelta;
-			parallax_sample = texture(material.texture_parallax1, texCoords).r;
-
-			stepIndex += 1;
-			currentHeight -= layerHeight;
-		}
-
-		if (numSamplesUnderSurface == 0){
-			shadowMultiplier = 1;
-		} else {
-			shadowMultiplier = 1.0 - shadowMultiplier;
-		}
+		stepIndex += 1;
+		currentHeight -= layerHeight;
 	}
-	return shadowMultiplier;
+
+	return pow(1.0 - (numSamplesUnderSurface / nbOfLayers), parallax_self_shadow_exponent);
 }
 
 
